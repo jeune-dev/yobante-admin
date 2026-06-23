@@ -1,3 +1,8 @@
-﻿// shipment.store.ts — Zustand slice shipment
-// TODO: state: { colisFilters, expeditionFilters, selectedColis, selectedExpedition }
-// TODO: actions: setColisFilters / setExpeditionFilters / reset
+﻿// domains/shipment/store/shipment.store.ts
+// TODO: State
+//   colisFilters: ColisFilters
+//   expeditionFilters: ExpeditionFilters
+//   selectedColisId: string | null
+//   selectedExpeditionId: string | null
+// TODO: Actions
+//   setColisFilters / setExpeditionFilters / selectColis / selectExpedition / reset
