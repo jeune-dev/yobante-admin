@@ -1,0 +1,1 @@
+﻿// PaymentTable.tsx — Transactions paiements

@@ -1,0 +1,2 @@
+﻿// shop/constants/index.ts
+// TODO: ORDER_STATUS_LABELS, PRODUCT_TYPES, SHOP_QUERY_KEYS

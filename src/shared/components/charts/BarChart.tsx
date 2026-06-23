@@ -1,0 +1,1 @@
+﻿// BarChart.tsx — Graphique barres
