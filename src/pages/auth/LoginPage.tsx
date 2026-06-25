@@ -37,9 +37,9 @@ export const LoginPage = () => {
       <div className="login-card">
         {/* Logo + Brand */}
         <div className="login-logo-row">
-          <img className="login-logo-img" src={LOGO} alt="Yobante" />
+          <img className="login-logo-img" src={LOGO} alt="YOBANTE" />
           <div>
-            <div className="login-brand-name">Yobante</div>
+            <div className="login-brand-name">YOBANTE</div>
             <div className="login-brand-sub">Administration</div>
           </div>
         </div>
