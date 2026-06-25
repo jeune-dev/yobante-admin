@@ -1,9 +1,16 @@
-﻿// ─────────────────────────────────────────────────────────────
-// app/routes/AppSelectGuard.tsx
-// Vérifie qu'une application est sélectionnée avant l'accès au dashboard
-// ─────────────────────────────────────────────────────────────
+﻿import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '@/auth/store/auth.store';
 
-// TODO: Lire selectedApp depuis authStore
-// TODO: Si null : <Navigate to='/select-app' replace />
-// TODO: Si selectedApp !== app (prop) : <Navigate to='/select-app' replace />
-// TODO: Si OK : <Outlet />
+interface AppSelectGuardProps {
+  requiredApp: 'shop' | 'shipment';
+}
+
+export const AppSelectGuard = ({ requiredApp }: AppSelectGuardProps) => {
+  const selectedApp = useAuthStore((state) => state.selectedApp);
+
+  if (!selectedApp || selectedApp !== requiredApp) {
+    return <Navigate to="/select-app" replace />;
+  }
+
+  return <Outlet />;
+};

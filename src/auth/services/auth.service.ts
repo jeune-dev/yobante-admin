@@ -1,23 +1,75 @@
-﻿// ─────────────────────────────────────────────────────────────
-// auth/services/auth.service.ts
-// ─────────────────────────────────────────────────────────────
+﻿import shopClient from '@/infrastructure/http/shop.client';
+import shipmentClient from '@/infrastructure/http/shipment.client';
+import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
-// TODO: login(payload: LoginPayload): Promise<AuthTokens>
-//   - Appeler shopClient.post('/auth/login', payload)
-//     ET shipmentClient.post('/auth/login', payload) en PARALLÈLE via Promise.allSettled
-//   - Si les 2 réussissent : stocker les 2 tokens via tokenManager
-//   - Si seulement 1 réussit : stocker le token disponible, marquer l'autre indisponible
-//   - Retourner { accessToken_shop, accessToken_shipment, user }
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
 
-// TODO: logout(): Promise<void>
-//   - Appeler shopClient.post('/auth/logout') ET shipmentClient.post('/auth/logout') en parallèle
-//   - Appeler tokenManager.clearAll()
-//   - Vider le store auth (authStore.logout())
+export interface AuthResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    nom: string;
+    prenom: string;
+    role: string;
+  };
+}
 
-// TODO: refreshShopToken(): Promise<string>
-//   - POST shopClient('/auth/refresh-token') avec le cookie refresh
-//   - Mettre à jour tokenManager.setShopToken(newToken)
+export interface LoginResult {
+  shop: { success: boolean; data?: AuthResponse; error?: any };
+  shipment: { success: boolean; data?: AuthResponse; error?: any };
+  user?: AuthResponse['user'];
+}
 
-// TODO: refreshShipmentToken(): Promise<string>
-//   - POST shipmentClient('/auth/refresh-token')
-//   - Mettre à jour tokenManager.setShipmentToken(newToken)
+export const authService = {
+  login: async (payload: LoginPayload): Promise<LoginResult> => {
+    const results = await Promise.allSettled([
+      shopClient.post('/auth/login', payload),
+      shipmentClient.post('/auth/login', payload),
+    ]);
+
+    const shopResult =
+      results[0].status === 'fulfilled'
+        ? { success: true, data: results[0].value as AuthResponse }
+        : { success: false, error: results[0].reason };
+
+    const shipmentResult =
+      results[1].status === 'fulfilled'
+        ? { success: true, data: results[1].value as AuthResponse }
+        : { success: false, error: results[1].reason };
+
+    // Store tokens
+    if (shopResult.success && shopResult.data) {
+      tokenManager.setShopToken(shopResult.data.accessToken);
+    }
+
+    if (shipmentResult.success && shipmentResult.data) {
+      tokenManager.setShipmentToken(shipmentResult.data.accessToken);
+    }
+
+    // Use shop user data if available, else shipment
+    const user = shopResult.data?.user || shipmentResult.data?.user;
+
+    return {
+      shop: shopResult,
+      shipment: shipmentResult,
+      user,
+    };
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await Promise.allSettled([
+        shopClient.post('/auth/logout', {}),
+        shipmentClient.post('/auth/logout', {}),
+      ]);
+    } catch {
+      // Ignore errors on logout
+    } finally {
+      tokenManager.clearAll();
+    }
+  },
+};

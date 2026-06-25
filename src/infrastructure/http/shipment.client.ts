@@ -1,18 +1,70 @@
-﻿// ─────────────────────────────────────────────────────────────
-// infrastructure/http/shipment.client.ts
-// Instance Axios dédiée UNIQUEMENT à l'API Yobante Colis
-// ─────────────────────────────────────────────────────────────
+﻿import axios, { AxiosError } from 'axios';
+import { ENV } from '@/config/env';
+import { tokenManager } from './tokenManager';
 
-// TODO: importer axios et tokenManager
-// TODO: créer shipmentClient = axios.create({ baseURL: import.meta.env.VITE_SHIPMENT_API_URL })
+const shipmentClient = axios.create({
+  baseURL: ENV.VITE_SHIPMENT_API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-// TODO: Intercepteur REQUEST
-//   - Lire le token colis via tokenManager.getShipmentToken()
-//   - L'injecter dans headers.Authorization = Bearer token
+// Request interceptor: Add auth token
+shipmentClient.interceptors.request.use(
+  (config) => {
+    const token = tokenManager.getShipmentToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// TODO: Intercepteur RESPONSE
-//   - Si réponse OK : retourner response.data
-//   - Si erreur 401 : tenter refresh token via /auth/refresh-token
-//   - Si refresh échoue : tokenManager.clearAll() + redirect /login
+// Response interceptor: Handle 401 and normalize responses
+shipmentClient.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
 
-// export default shipmentClient
+    // Handle 401 (token expired)
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh token
+        const response = await axios.post(
+          `${ENV.VITE_SHIPMENT_API_URL}/auth/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+
+        const newToken = response.data.accessToken;
+        tokenManager.setShipmentToken(newToken);
+
+        // Retry original request
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return shipmentClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - logout
+        tokenManager.clearAll();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Return error with normalized message
+    const message =
+      (error.response?.data as any)?.message || error.message || 'An error occurred';
+    return Promise.reject({
+      status: error.response?.status,
+      message,
+      data: error.response?.data,
+    });
+  }
+);
+
+export default shipmentClient;

@@ -1,20 +1,38 @@
-﻿// ─────────────────────────────────────────────────────────────
-// infrastructure/auth/tokenManager.ts
-// Gestion centralisée des tokens pour les 2 applications
-// ─────────────────────────────────────────────────────────────
+﻿const KEYS = {
+  SHOP: 'token_shop',
+  SHIPMENT: 'token_shipment',
+} as const;
 
-// TODO: SHOP TOKEN
-//   getShopToken(): string | null    -> localStorage.getItem('token_shop')
-//   setShopToken(token: string): void -> localStorage.setItem('token_shop', token)
-//   removeShopToken(): void           -> localStorage.removeItem('token_shop')
+export const tokenManager = {
+  // Shop tokens
+  getShopToken: (): string | null => {
+    return localStorage.getItem(KEYS.SHOP);
+  },
 
-// TODO: SHIPMENT TOKEN
-//   getShipmentToken(): string | null
-//   setShipmentToken(token: string): void
-//   removeShipmentToken(): void
+  setShopToken: (token: string): void => {
+    localStorage.setItem(KEYS.SHOP, token);
+  },
 
-// TODO: clearAll(): void
-//   - Supprime token_shop ET token_shipment
-//   - Utilisé au logout global
+  removeShopToken: (): void => {
+    localStorage.removeItem(KEYS.SHOP);
+  },
 
-// export const tokenManager = { getShopToken, setShopToken, ... }
+  // Shipment tokens
+  getShipmentToken: (): string | null => {
+    return localStorage.getItem(KEYS.SHIPMENT);
+  },
+
+  setShipmentToken: (token: string): void => {
+    localStorage.setItem(KEYS.SHIPMENT, token);
+  },
+
+  removeShipmentToken: (): void => {
+    localStorage.removeItem(KEYS.SHIPMENT);
+  },
+
+  // Clear all tokens (logout)
+  clearAll: (): void => {
+    localStorage.removeItem(KEYS.SHOP);
+    localStorage.removeItem(KEYS.SHIPMENT);
+  },
+};

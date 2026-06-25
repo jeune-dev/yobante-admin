@@ -1,7 +1,12 @@
-﻿// ─────────────────────────────────────────────────────────────
-// app/routes/PrivateRoute.tsx — Guard d'authentification
-// ─────────────────────────────────────────────────────────────
+﻿import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '@/auth/store/auth.store';
 
-// TODO: Lire isAuthenticated depuis authStore
-// TODO: Si false : <Navigate to='/login' replace />
-// TODO: Si true : <Outlet /> (rendre les routes enfants)
+export const PrivateRoute = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+};

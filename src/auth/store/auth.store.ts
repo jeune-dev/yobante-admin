@@ -1,21 +1,66 @@
-﻿// ─────────────────────────────────────────────────────────────
-// auth/store/auth.store.ts — Zustand store global d'authentification
-// ─────────────────────────────────────────────────────────────
+﻿import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
-// TODO: State
-//   user: AdminUser | null
-//   isAuthenticated: boolean
-//   selectedApp: 'shop' | 'shipment' | null
-//   isShopAvailable: boolean    (token shop obtenu avec succès)
-//   isShipmentAvailable: boolean (token shipment obtenu avec succès)
-//   isLoading: boolean
+interface User {
+  id: string;
+  email: string;
+  nom: string;
+  prenom: string;
+  role: string;
+}
 
-// TODO: Actions
-//   setUser(user: AdminUser): void
-//   setSelectedApp(app: 'shop' | 'shipment'): void
-//   setTokenAvailability(shop: boolean, shipment: boolean): void
-//   logout(): void  -> reset tout le state + tokenManager.clearAll()
+interface AuthStore {
+  user: User | null;
+  isAuthenticated: boolean;
+  selectedApp: 'shop' | 'shipment' | null;
+  isShopAvailable: boolean;
+  isShipmentAvailable: boolean;
+  isLoading: boolean;
 
-// TODO: Persist avec zustand/middleware persist
-//   - Persister : selectedApp, isAuthenticated
-//   - Ne PAS persister : tokens (gérés par tokenManager dans localStorage)
+  setUser: (user: User | null) => void;
+  setAuthenticated: (value: boolean) => void;
+  setSelectedApp: (app: 'shop' | 'shipment' | null) => void;
+  setTokenAvailability: (shop: boolean, shipment: boolean) => void;
+  setLoading: (loading: boolean) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      selectedApp: null,
+      isShopAvailable: false,
+      isShipmentAvailable: false,
+      isLoading: false,
+
+      setUser: (user) => set({ user }),
+      setAuthenticated: (value) => set({ isAuthenticated: value }),
+      setSelectedApp: (app) => set({ selectedApp: app }),
+      setTokenAvailability: (shop, shipment) =>
+        set({ isShopAvailable: shop, isShipmentAvailable: shipment }),
+      setLoading: (loading) => set({ isLoading: loading }),
+
+      logout: () => {
+        tokenManager.clearAll();
+        set({
+          user: null,
+          isAuthenticated: false,
+          selectedApp: null,
+          isShopAvailable: false,
+          isShipmentAvailable: false,
+        });
+      },
+    }),
+    {
+      name: 'auth-store',
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        selectedApp: state.selectedApp,
+        user: state.user,
+      }),
+    }
+  )
+);

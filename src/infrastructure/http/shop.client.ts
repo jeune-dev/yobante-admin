@@ -1,19 +1,70 @@
-﻿// ─────────────────────────────────────────────────────────────
-// infrastructure/http/shop.client.ts
-// Instance Axios dédiée UNIQUEMENT à l'API Yobante Boutique
-// ─────────────────────────────────────────────────────────────
+﻿import axios, { AxiosError } from 'axios';
+import { ENV } from '@/config/env';
+import { tokenManager } from './tokenManager';
 
-// TODO: importer axios et tokenManager
-// TODO: créer shopClient = axios.create({ baseURL: import.meta.env.VITE_SHOP_API_URL })
+const shopClient = axios.create({
+  baseURL: ENV.VITE_SHOP_API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-// TODO: Intercepteur REQUEST
-//   - Lire le token boutique via tokenManager.getShopToken()
-//   - L'injecter dans headers.Authorization = Bearer token
+// Request interceptor: Add auth token
+shopClient.interceptors.request.use(
+  (config) => {
+    const token = tokenManager.getShopToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// TODO: Intercepteur RESPONSE
-//   - Si réponse OK : retourner response.data directement
-//   - Si erreur 401 : tenter un refresh token via /auth/refresh-token
-//   - Si refresh échoue : appeler tokenManager.clearAll() + redirect /login
-//   - Si autre erreur : normaliser et rejeter
+// Response interceptor: Handle 401 and normalize responses
+shopClient.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
 
-// export default shopClient
+    // Handle 401 (token expired)
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh token
+        const response = await axios.post(
+          `${ENV.VITE_SHOP_API_URL}/auth/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+
+        const newToken = response.data.accessToken;
+        tokenManager.setShopToken(newToken);
+
+        // Retry original request
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return shopClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - logout
+        tokenManager.clearAll();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Return error with normalized message
+    const message =
+      (error.response?.data as any)?.message || error.message || 'An error occurred';
+    return Promise.reject({
+      status: error.response?.status,
+      message,
+      data: error.response?.data,
+    });
+  }
+);
+
+export default shopClient;

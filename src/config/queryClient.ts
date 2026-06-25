@@ -1,16 +1,14 @@
-﻿// ─────────────────────────────────────────────────────────────
-// config/queryClient.ts — Instance TanStack Query
-// ─────────────────────────────────────────────────────────────
+﻿import { QueryClient } from '@tanstack/react-query';
 
-// TODO: new QueryClient({
-//   defaultOptions: {
-//     queries: {
-//       staleTime: 5 * 60 * 1000,     (5 minutes)
-//       retry: 1,
-//       refetchOnWindowFocus: false,
-//     },
-//     mutations: {
-//       onError: (error) -> afficher toast erreur global
-//     }
-//   }
-// })
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});

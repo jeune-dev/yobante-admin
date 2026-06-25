@@ -1,49 +1,75 @@
-﻿// ─────────────────────────────────────────────────────────────
-// app/routes/index.tsx — Configuration centralisée des routes
-// ─────────────────────────────────────────────────────────────
+﻿import { createBrowserRouter } from 'react-router-dom';
+import { LoginPage } from '@/pages/auth/LoginPage';
+import { SelectAppPage } from '@/pages/select-app/SelectAppPage';
+import { PrivateRoute } from './PrivateRoute';
+import { AppSelectGuard } from './AppSelectGuard';
 
-// TODO: Routes publiques (sans auth)
-//   /login -> LoginPage (AuthLayout)
+// Placeholder components for shop and shipment
+const ShopDashboard = () => <div className="p-8"><h1>Shop Dashboard - À implémenter</h1></div>;
+const ShipmentDashboard = () => <div className="p-8"><h1>Shipment Dashboard - À implémenter</h1></div>;
+const NotFound = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold text-gray-900 mb-2">404</h1>
+      <p className="text-gray-600 mb-4">Page non trouvée</p>
+      <a href="/" className="text-blue-600 hover:text-blue-700">
+        Retour à l'accueil
+      </a>
+    </div>
+  </div>
+);
 
-// TODO: Route sélection app (auth requise, pas d'app requise)
-//   /select-app -> SelectAppPage (SelectAppLayout) [withAuth]
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    errorElement: <NotFound />,
+    children: [
+      // Public routes
+      {
+        path: 'login',
+        element: <LoginPage />,
+      },
 
-// TODO: Routes SHOP (auth + app='shop' requis)
-//   /shop/dashboard            -> DashboardPage
-//   /shop/products             -> ProductsPage
-//   /shop/products/new         -> ProductCreatePage
-//   /shop/products/:id/edit    -> ProductEditPage
-//   /shop/categories           -> CategoriesPage
-//   /shop/orders               -> OrdersPage
-//   /shop/orders/:id           -> OrderDetailPage
-//   /shop/payments             -> PaymentsPage
-//   /shop/reviews              -> ReviewsPage
-//   /shop/users                -> UsersPage
-//   /shop/users/:id            -> UserDetailPage
-//   /shop/analytics            -> AnalyticsPage
-//   /shop/settings             -> SettingsPage
-//   Toutes avec : [withAuth, withAppSelected('shop'), ShopLayout]
+      // Protected routes - Auth required
+      {
+        element: <PrivateRoute />,
+        children: [
+          {
+            path: 'select-app',
+            element: <SelectAppPage />,
+          },
 
-// TODO: Routes SHIPMENT (auth + app='shipment' requis)
-//   /shipment/dashboard        -> DashboardPage
-//   /shipment/colis            -> ColisPage
-//   /shipment/colis/new        -> ColisCreatePage
-//   /shipment/colis/:id        -> ColisDetailPage
-//   /shipment/expeditions      -> ExpeditionsPage
-//   /shipment/expeditions/new  -> ExpeditionCreatePage
-//   /shipment/expeditions/:id  -> ExpeditionDetailPage
-//   /shipment/douane           -> DouanePage
-//   /shipment/douane/:id       -> DouaneDetailPage
-//   /shipment/tarifs           -> TarifsPage
-//   /shipment/entrepots        -> EntrepotsPage
-//   /shipment/zones            -> ZonesPage
-//   /shipment/factures         -> FacturesPage
-//   /shipment/factures/:id     -> FactureDetailPage
-//   /shipment/payments         -> PaymentsPage
-//   /shipment/users            -> UsersPage
-//   /shipment/users/:id        -> UserDetailPage
-//   /shipment/analytics        -> AnalyticsPage
-//   /shipment/settings         -> SettingsPage
-//   Toutes avec : [withAuth, withAppSelected('shipment'), ShipmentLayout]
+          // Shop routes
+          {
+            element: <AppSelectGuard requiredApp="shop" />,
+            children: [
+              {
+                path: 'shop/dashboard',
+                element: <ShopDashboard />,
+              },
+              // Add more shop routes here as they're implemented
+            ],
+          },
 
-// TODO: Route catch-all -> redirect /login
+          // Shipment routes
+          {
+            element: <AppSelectGuard requiredApp="shipment" />,
+            children: [
+              {
+                path: 'shipment/dashboard',
+                element: <ShipmentDashboard />,
+              },
+              // Add more shipment routes here as they're implemented
+            ],
+          },
+        ],
+      },
+
+      // Redirect root to login
+      {
+        path: '/',
+        element: <LoginPage />,
+      },
+    ],
+  },
+]);
