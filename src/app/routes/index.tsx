@@ -17,55 +17,58 @@ const NotFound = () => (
   </div>
 );
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    errorElement: <NotFound />,
-    children: [
-      // Redirect root to login
-      {
-        index: true,
-        element: <Navigate to="/login" replace />,
-      },
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      errorElement: <NotFound />,
+      children: [
+        // Redirect root to login
+        {
+          index: true,
+          element: <Navigate to="/login" replace />,
+        },
 
-      // Public routes
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
+        // Public routes
+        {
+          path: 'login',
+          element: <LoginPage />,
+        },
 
-      // Protected routes - Auth required
-      {
-        element: <PrivateRoute />,
-        children: [
-          {
-            path: 'select-app',
-            element: <SelectAppPage />,
-          },
+        // Protected routes - Auth required
+        {
+          element: <PrivateRoute />,
+          children: [
+            {
+              path: 'select-app',
+              element: <SelectAppPage />,
+            },
 
-          // Shop routes
-          {
-            element: <AppSelectGuard requiredApp="shop" />,
-            children: [
-              {
-                path: 'shop/dashboard',
-                element: <ShopDashboard />,
-              },
-            ],
-          },
+            // Shop routes
+            {
+              element: <AppSelectGuard requiredApp="shop" />,
+              children: [
+                {
+                  path: 'boutique/dashboard',
+                  element: <ShopDashboard />,
+                },
+              ],
+            },
 
-          // Shipment routes
-          {
-            element: <AppSelectGuard requiredApp="shipment" />,
-            children: [
-              {
-                path: 'shipment/dashboard',
-                element: <ShipmentDashboard />,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-]);
+            // Shipment routes
+            {
+              element: <AppSelectGuard requiredApp="shipment" />,
+              children: [
+                {
+                  path: 'colis/dashboard',
+                  element: <ShipmentDashboard />,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  { basename: '/yobante-admin' }
+);
