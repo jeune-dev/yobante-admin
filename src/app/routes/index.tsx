@@ -4,9 +4,7 @@ import { SelectAppPage } from '@/pages/select-app/SelectAppPage';
 import { PrivateRoute } from './PrivateRoute';
 import { AppSelectGuard } from './AppSelectGuard';
 import { ShopDashboard } from '@/pages/shop/dashboard/DashboardPage';
-
-// Placeholder components for shipment
-const ShipmentDashboard = () => <div className="p-8"><h1>Shipment Dashboard - À implémenter</h1></div>;
+import { ShipmentDashboard } from '@/pages/shipment/dashboard/DashboardPage';
 const NotFound = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="text-center">
