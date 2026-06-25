@@ -1,4 +1,4 @@
-﻿import { createBrowserRouter } from 'react-router-dom';
+﻿import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SelectAppPage } from '@/pages/select-app/SelectAppPage';
 import { PrivateRoute } from './PrivateRoute';
@@ -17,57 +17,58 @@ const NotFound = () => (
   </div>
 );
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    errorElement: <NotFound />,
-    children: [
-      // Public routes
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      errorElement: <NotFound />,
+      children: [
+        // Redirect root to login
+        {
+          index: true,
+          element: <Navigate to="/login" replace />,
+        },
 
-      // Protected routes - Auth required
-      {
-        element: <PrivateRoute />,
-        children: [
-          {
-            path: 'select-app',
-            element: <SelectAppPage />,
-          },
+        // Public routes
+        {
+          path: 'login',
+          element: <LoginPage />,
+        },
 
-          // Shop routes
-          {
-            element: <AppSelectGuard requiredApp="shop" />,
-            children: [
-              {
-                path: 'shop/dashboard',
-                element: <ShopDashboard />,
-              },
-              // Add more shop routes here as they're implemented
-            ],
-          },
+        // Protected routes - Auth required
+        {
+          element: <PrivateRoute />,
+          children: [
+            {
+              path: 'select-app',
+              element: <SelectAppPage />,
+            },
 
-          // Shipment routes
-          {
-            element: <AppSelectGuard requiredApp="shipment" />,
-            children: [
-              {
-                path: 'shipment/dashboard',
-                element: <ShipmentDashboard />,
-              },
-              // Add more shipment routes here as they're implemented
-            ],
-          },
-        ],
-      },
+            // Shop routes
+            {
+              element: <AppSelectGuard requiredApp="shop" />,
+              children: [
+                {
+                  path: 'shop/dashboard',
+                  element: <ShopDashboard />,
+                },
+              ],
+            },
 
-      // Redirect root to login
-      {
-        path: '/',
-        element: <LoginPage />,
-      },
-    ],
-  },
-]);
+            // Shipment routes
+            {
+              element: <AppSelectGuard requiredApp="shipment" />,
+              children: [
+                {
+                  path: 'shipment/dashboard',
+                  element: <ShipmentDashboard />,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  { basename: '/yobante-admin' }
+);
