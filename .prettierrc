@@ -1,1 +1,9 @@
-﻿// TODO: Prettier config — singleQuote, semi, tabWidth:2
+﻿{
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "arrowParens": "avoid"
+}
+
