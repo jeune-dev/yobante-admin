@@ -1,6 +1,6 @@
 ﻿import axios, { AxiosError } from 'axios';
 import { ENV } from '@/config/env';
-import { tokenManager } from './tokenManager';
+import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
 const shipmentClient = axios.create({
   baseURL: ENV.VITE_SHIPMENT_API_URL,
