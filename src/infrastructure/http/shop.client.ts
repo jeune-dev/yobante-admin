@@ -51,7 +51,7 @@ shopClient.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - logout
         tokenManager.clearAll();
-        window.location.href = '/login';
+        window.location.href = '/yobante-admin/login';
         return Promise.reject(refreshError);
       }
     }

@@ -31,15 +31,19 @@ export const authService = {
       shipmentClient.post('/auth/login', payload),
     ]);
 
-    const shopResult =
-      results[0].status === 'fulfilled'
-        ? { success: true, data: results[0].value as AuthResponse }
-        : { success: false, error: results[0].reason };
+    const shopRaw = results[0].status === 'fulfilled' ? (results[0].value as any) : null;
+    const shipmentRaw = results[1].status === 'fulfilled' ? (results[1].value as any) : null;
 
-    const shipmentResult =
-      results[1].status === 'fulfilled'
-        ? { success: true, data: results[1].value as AuthResponse }
-        : { success: false, error: results[1].reason };
+    const shopData: AuthResponse | undefined = shopRaw?.data || shopRaw;
+    const shipmentData: AuthResponse | undefined = shipmentRaw?.data || shipmentRaw;
+
+    const shopResult = shopData?.accessToken
+      ? { success: true, data: shopData }
+      : { success: false, error: results[0].status === 'rejected' ? (results[0] as any).reason : 'No token' };
+
+    const shipmentResult = shipmentData?.accessToken
+      ? { success: true, data: shipmentData }
+      : { success: false, error: results[1].status === 'rejected' ? (results[1] as any).reason : 'No token' };
 
     // Store tokens
     if (shopResult.success && shopResult.data) {

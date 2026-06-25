@@ -20,12 +20,4 @@ export default defineConfig({
     sourcemap: false,
     minify: 'terser',
   },
-  css: {
-    postcss: {
-      plugins: [
-        require('tailwindcss'),
-        require('autoprefixer'),
-      ],
-    },
-  },
 })

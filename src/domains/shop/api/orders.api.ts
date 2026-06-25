@@ -1,26 +1,56 @@
-﻿// domains/shop/api/orders.api.ts — Appels API Boutique / Commandes
-// import shopClient from '@/infrastructure/http/shop.client'
+import shopClient from '@/infrastructure/http/shop.client';
 
-// TODO: getOrders(filters: OrderFilters): Promise<PaginatedResponse<Order>>
-//   -> shopClient.get('/admin/commandes', { params: filters })
+export interface OrderItem {
+  id: number;
+  produitId: number;
+  quantite: number;
+  prixUnitaire: number;
+  sousTotal: number;
+  Produit?: { id: number; nom: string; images?: any };
+}
 
-// TODO: getOrderById(id: string): Promise<Order>
-//   -> shopClient.get(/admin/commandes/)
+export interface Order {
+  id: string;
+  statut: 'en_attente' | 'validee' | 'en_preparation' | 'expediee' | 'livree' | 'annulee';
+  methodePaiement: string;
+  note?: string;
+  noteAdmin?: string;
+  total?: number;
+  createdAt: string;
+  User?: { id: string; nom: string; prenom: string; email: string };
+  Adresse?: { rue: string; ville: string; pays: string };
+  CommandeItems?: OrderItem[];
+  Paiement?: { statut: string; montant: number };
+}
 
-// TODO: validateOrder(id: string, noteAdmin?: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//valider, { noteAdmin })
+export interface OrderFilters {
+  page?: number;
+  limit?: number;
+  statut?: string;
+  search?: string;
+}
 
-// TODO: rejectOrder(id: string, raison: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//rejeter, { raison })
+const extract = (res: any) => res?.data ?? res;
 
-// TODO: markPreparing(id: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//preparation)
+export const ordersApi = {
+  getAll: (filters: OrderFilters = {}): Promise<{ rows: Order[]; count: number; totalPages: number }> =>
+    shopClient.get('/admin/commandes', { params: filters }).then(extract),
 
-// TODO: markShipped(id: string, trackingInfo: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//expedier, { trackingInfo })
+  getById: (id: string): Promise<Order> =>
+    shopClient.get(`/admin/commandes/${id}`).then(extract),
 
-// TODO: markDelivered(id: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//livrer)
+  valider: (id: string): Promise<Order> =>
+    shopClient.patch(`/admin/commandes/${id}/valider`).then(extract),
 
-// TODO: exportOrders(filters: OrderFilters, format: 'csv' | 'xlsx'): Promise<Blob>
-//   -> shopClient.get('/admin/commandes/export', { params: { ...filters, format }, responseType: 'blob' })
+  rejeter: (id: string): Promise<Order> =>
+    shopClient.patch(`/admin/commandes/${id}/rejeter`).then(extract),
+
+  preparation: (id: string): Promise<Order> =>
+    shopClient.patch(`/admin/commandes/${id}/preparation`).then(extract),
+
+  expedier: (id: string): Promise<Order> =>
+    shopClient.patch(`/admin/commandes/${id}/expedier`).then(extract),
+
+  livrer: (id: string): Promise<Order> =>
+    shopClient.patch(`/admin/commandes/${id}/livrer`).then(extract),
+};

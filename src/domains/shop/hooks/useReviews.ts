@@ -1,2 +1,27 @@
-﻿// useReviews.ts
-// TODO: useQuery + approve/delete mutations
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { reviewsApi, ReviewFilters } from '@/domains/shop/api/reviews.api';
+
+const KEY = 'shop-reviews';
+
+export const useReviews = (filters: ReviewFilters = {}) =>
+  useQuery({
+    queryKey: [KEY, filters],
+    queryFn: () => reviewsApi.getAll(filters),
+    staleTime: 30_000,
+  });
+
+export const useToggleApprove = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => reviewsApi.approuver(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useDeleteReview = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => reviewsApi.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};

@@ -1,29 +1,55 @@
-﻿// domains/shop/api/products.api.ts — Appels API Boutique / Produits
-// import shopClient from '@/infrastructure/http/shop.client'
+import shopClient from '@/infrastructure/http/shop.client';
 
-// TODO: getProducts(filters: ProductFilters): Promise<PaginatedResponse<Product>>
-//   -> shopClient.get('/admin/produits', { params: filters })
+export interface Product {
+  id: number;
+  nom: string;
+  slug: string;
+  description?: string;
+  prix: number;
+  prixPromo?: number;
+  stock: number;
+  categorieId: number;
+  images?: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  poids?: number;
+  reference?: string;
+  Categorie?: { id: number; nom: string };
+  createdAt: string;
+}
 
-// TODO: getProductById(id: string): Promise<Product>
-//   -> shopClient.get(/admin/produits/)
+export interface ProductFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categorieId?: number;
+  isActive?: boolean;
+}
 
-// TODO: createProduct(data: FormData): Promise<Product>
-//   -> shopClient.post('/admin/produits', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+const extract = (res: any) => res?.data ?? res;
 
-// TODO: updateProduct(id: string, data: FormData): Promise<Product>
-//   -> shopClient.put(/admin/produits/, data)
+export const productsApi = {
+  getAll: (filters: ProductFilters = {}): Promise<{ rows: Product[]; count: number; totalPages: number }> =>
+    shopClient.get('/admin/produits', { params: filters }).then(extract),
 
-// TODO: deleteProduct(id: string): Promise<void>
-//   -> shopClient.delete(/admin/produits/)
+  getById: (id: number): Promise<Product> =>
+    shopClient.get(`/admin/produits/${id}`).then(extract),
 
-// TODO: updateStock(id: string, quantite: number): Promise<Product>
-//   -> shopClient.patch(/admin/produits//stock, { quantite })
+  create: (data: FormData): Promise<Product> =>
+    shopClient.post('/admin/produits', data, { headers: { 'Content-Type': 'multipart/form-data' } }).then(extract),
 
-// TODO: toggleFeatured(id: string): Promise<Product>
-//   -> shopClient.patch(/admin/produits//featured)
+  update: (id: number, data: FormData): Promise<Product> =>
+    shopClient.put(`/admin/produits/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }).then(extract),
 
-// TODO: toggleVisibilite(id: string): Promise<Product>
-//   -> shopClient.patch(/admin/produits//visibilite)
+  remove: (id: number): Promise<void> =>
+    shopClient.delete(`/admin/produits/${id}`).then(extract),
 
-// TODO: importProducts(file: File): Promise<{ created: number, errors: any[] }>
-//   -> shopClient.post('/admin/produits/import', formData)
+  updateStock: (id: number, quantite: number): Promise<Product> =>
+    shopClient.patch(`/admin/produits/${id}/stock`, { quantite }).then(extract),
+
+  toggleFeatured: (id: number): Promise<Product> =>
+    shopClient.patch(`/admin/produits/${id}/featured`).then(extract),
+
+  toggleVisibilite: (id: number): Promise<Product> =>
+    shopClient.patch(`/admin/produits/${id}/visibilite`).then(extract),
+};
