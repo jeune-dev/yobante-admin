@@ -33,12 +33,12 @@ export const authService = {
 
     const shopResult =
       results[0].status === 'fulfilled'
-        ? { success: true, data: results[0].value as AuthResponse }
+        ? { success: true, data: (results[0].value as unknown) as AuthResponse }
         : { success: false, error: results[0].reason };
 
     const shipmentResult =
       results[1].status === 'fulfilled'
-        ? { success: true, data: results[1].value as AuthResponse }
+        ? { success: true, data: (results[1].value as unknown) as AuthResponse }
         : { success: false, error: results[1].reason };
 
     // Store tokens
