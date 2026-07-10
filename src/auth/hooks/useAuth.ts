@@ -1,6 +1,8 @@
 ﻿import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/auth/store/auth.store';
+import { useAuthStore, type User } from '@/auth/store/auth.store';
 import { authService } from '@/auth/services/auth.service';
+
+export type { User };
 
 export const useAuth = () => {
   const navigate = useNavigate();
@@ -14,7 +16,7 @@ export const useAuth = () => {
 
   const selectApp = (app: 'shop' | 'shipment') => {
     setSelectedApp(app);
-    navigate(app === 'shop' ? '/shop/dashboard' : '/shipment/dashboard');
+    navigate(app === 'shop' ? '/boutique/dashboard' : '/colis/dashboard');
   };
 
   const handleLogout = async () => {

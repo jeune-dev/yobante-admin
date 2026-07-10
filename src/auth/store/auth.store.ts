@@ -2,7 +2,7 @@
 import { persist } from 'zustand/middleware';
 import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   nom: string;

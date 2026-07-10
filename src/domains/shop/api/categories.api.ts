@@ -1,28 +1,22 @@
 import shopClient from '@/infrastructure/http/shop.client';
 
-export interface Category {
-  id: number;
-  nom: string;
-  description?: string;
-  parentId?: number;
-}
-
-const extract = (res: any) => res?.data ?? res;
-const extractList = (res: any) => {
-  const d = res?.data ?? res;
-  return Array.isArray(d) ? d : (d?.rows ?? []);
-};
-
 export const categoriesApi = {
-  getAll: (): Promise<Category[]> =>
-    shopClient.get('/admin/categories?limit=100').then(extractList),
+  getAll: (): Promise<any> =>
+    shopClient.get('/v1/admin/categories'),
 
-  create: (data: { nom: string; description?: string; parentId?: number }): Promise<Category> =>
-    shopClient.post('/admin/categories', data).then(extract),
+  getById: (id: string): Promise<any> =>
+    shopClient.get(`/v1/admin/categories/${id}`),
 
-  update: (id: number, data: { nom: string; description?: string }): Promise<Category> =>
-    shopClient.put(`/admin/categories/${id}`, data).then(extract),
+  create: (data: FormData | Record<string, any>): Promise<any> =>
+    shopClient.post('/v1/admin/categories', data,
+      data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
+    ),
 
-  remove: (id: number): Promise<void> =>
-    shopClient.delete(`/admin/categories/${id}`).then(extract),
+  update: (id: string, data: FormData | Record<string, any>): Promise<any> =>
+    shopClient.put(`/v1/admin/categories/${id}`, data,
+      data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
+    ),
+
+  delete: (id: string): Promise<any> =>
+    shopClient.delete(`/v1/admin/categories/${id}`),
 };

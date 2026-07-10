@@ -1,35 +1,31 @@
 import shopClient from '@/infrastructure/http/shop.client';
 
-export interface Payment {
-  id: number;
-  commandeId: string;
-  montant: number;
-  methodePaiement: string;
-  statut: 'en_attente' | 'succes' | 'echec' | 'rembourse';
-  transactionId?: string;
-  payeAt?: string;
-  createdAt: string;
-  Commande?: {
-    id: string;
-    User?: { nom: string; prenom: string; email: string };
-  };
-}
-
 export interface PaymentFilters {
+  statut?: string;
+  methode?: string;
+  userId?: string;
+  dateDebut?: string;
+  dateFin?: string;
   page?: number;
   limit?: number;
-  statut?: string;
 }
 
-const extract = (res: any) => res?.data ?? res;
-
 export const paymentsApi = {
-  getAll: (filters: PaymentFilters = {}): Promise<{ rows: Payment[]; count: number; totalPages: number }> =>
-    shopClient.get('/admin/paiements', { params: filters }).then(extract),
+  getAll: (filters?: PaymentFilters): Promise<any> =>
+    shopClient.get('/v1/admin/paiements', { params: filters }),
 
-  getById: (id: number): Promise<Payment> =>
-    shopClient.get(`/admin/paiements/${id}`).then(extract),
+  getById: (id: string): Promise<any> =>
+    shopClient.get(`/v1/admin/paiements/${id}`),
 
-  rembourser: (id: number): Promise<Payment> =>
-    shopClient.patch(`/admin/paiements/${id}/rembourser`).then(extract),
+  getByCommande: (commandeId: string): Promise<any> =>
+    shopClient.get(`/v1/admin/paiements/commande/${commandeId}`),
+
+  confirmer: (id: string, transactionId?: string): Promise<any> =>
+    shopClient.patch(`/v1/admin/paiements/${id}/confirmer`, { transactionId }),
+
+  rembourser: (id: string, raison?: string): Promise<any> =>
+    shopClient.patch(`/v1/admin/paiements/${id}/rembourser`, { raison }),
+
+  getRevenusTotal: (dateDebut?: string, dateFin?: string): Promise<any> =>
+    shopClient.get('/v1/admin/paiements/revenus-total', { params: { dateDebut, dateFin } }),
 };

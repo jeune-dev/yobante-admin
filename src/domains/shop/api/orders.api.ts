@@ -1,56 +1,22 @@
 import shopClient from '@/infrastructure/http/shop.client';
-
-export interface OrderItem {
-  id: number;
-  produitId: number;
-  quantite: number;
-  prixUnitaire: number;
-  sousTotal: number;
-  Produit?: { id: number; nom: string; images?: any };
-}
-
-export interface Order {
-  id: string;
-  statut: 'en_attente' | 'validee' | 'en_preparation' | 'expediee' | 'livree' | 'annulee';
-  methodePaiement: string;
-  note?: string;
-  noteAdmin?: string;
-  total?: number;
-  createdAt: string;
-  User?: { id: string; nom: string; prenom: string; email: string };
-  Adresse?: { rue: string; ville: string; pays: string };
-  CommandeItems?: OrderItem[];
-  Paiement?: { statut: string; montant: number };
-}
+import type { StatutCommande } from '../types';
 
 export interface OrderFilters {
+  statut?: StatutCommande;
+  userId?: string;
+  dateDebut?: string;
+  dateFin?: string;
   page?: number;
   limit?: number;
-  statut?: string;
-  search?: string;
 }
 
-const extract = (res: any) => res?.data ?? res;
-
 export const ordersApi = {
-  getAll: (filters: OrderFilters = {}): Promise<{ rows: Order[]; count: number; totalPages: number }> =>
-    shopClient.get('/admin/commandes', { params: filters }).then(extract),
+  getAll: (filters?: OrderFilters): Promise<any> =>
+    shopClient.get('/v1/admin/commandes', { params: filters }),
 
-  getById: (id: string): Promise<Order> =>
-    shopClient.get(`/admin/commandes/${id}`).then(extract),
+  getById: (id: string): Promise<any> =>
+    shopClient.get(`/v1/admin/commandes/${id}`),
 
-  valider: (id: string): Promise<Order> =>
-    shopClient.patch(`/admin/commandes/${id}/valider`).then(extract),
-
-  rejeter: (id: string): Promise<Order> =>
-    shopClient.patch(`/admin/commandes/${id}/rejeter`).then(extract),
-
-  preparation: (id: string): Promise<Order> =>
-    shopClient.patch(`/admin/commandes/${id}/preparation`).then(extract),
-
-  expedier: (id: string): Promise<Order> =>
-    shopClient.patch(`/admin/commandes/${id}/expedier`).then(extract),
-
-  livrer: (id: string): Promise<Order> =>
-    shopClient.patch(`/admin/commandes/${id}/livrer`).then(extract),
+  updateStatut: (id: string, statut: StatutCommande, noteAdmin?: string): Promise<any> =>
+    shopClient.patch(`/v1/admin/commandes/${id}/statut`, { statut, noteAdmin }),
 };

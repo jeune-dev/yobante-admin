@@ -9,6 +9,13 @@ dist
 dist-ssr
 *.local
 
+# TypeScript generated files (tsc -b output in src/)
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+src/**/*.d.ts.map
+!src/vite-env.d.ts
+
 # editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -32,3 +39,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
