@@ -3,7 +3,7 @@ import shipmentClient from '@/infrastructure/http/shipment.client';
 import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
 export interface LoginPayload {
-  email: string;
+  identifiant: string;
   password: string;
 }
 
@@ -34,14 +34,27 @@ export const authService = {
     const shopRaw = results[0].status === 'fulfilled' ? (results[0].value as any) : null;
     const shipmentRaw = results[1].status === 'fulfilled' ? (results[1].value as any) : null;
 
-    const shopData: AuthResponse | undefined = shopRaw?.data || shopRaw;
-    const shipmentData: AuthResponse | undefined = shipmentRaw?.data || shipmentRaw;
+    // Backend wraps response in { success, message, data: { token, user } }
+    // Axios wraps that in response.data → so: shopRaw.data.data.token
+    const shopInner = shopRaw?.data?.data ?? shopRaw?.data ?? shopRaw;
+    const shipmentInner = shipmentRaw?.data?.data ?? shipmentRaw?.data ?? shipmentRaw;
 
-    const shopResult = shopData?.accessToken
+    // Normalize: backend uses "token", frontend interface uses "accessToken"
+    const normalize = (inner: any): AuthResponse | undefined => {
+      if (!inner) return undefined;
+      const token = inner.accessToken ?? inner.token;
+      if (!token) return undefined;
+      return { accessToken: token, user: inner.user };
+    };
+
+    const shopData = normalize(shopInner);
+    const shipmentData = normalize(shipmentInner);
+
+    const shopResult = shopData
       ? { success: true, data: shopData }
       : { success: false, error: results[0].status === 'rejected' ? (results[0] as any).reason : 'No token' };
 
-    const shipmentResult = shipmentData?.accessToken
+    const shipmentResult = shipmentData
       ? { success: true, data: shipmentData }
       : { success: false, error: results[1].status === 'rejected' ? (results[1] as any).reason : 'No token' };
 

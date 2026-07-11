@@ -37,12 +37,12 @@ shopClient.interceptors.response.use(
       try {
         // Try to refresh token
         const response = await axios.post(
-          `${ENV.VITE_SHOP_API_URL}/auth/refresh-token`,
+          `${ENV.VITE_SHOP_API_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );
 
-        const newToken = response.data.accessToken;
+        const newToken = response.data?.data?.token ?? response.data?.accessToken ?? response.data?.token;
         tokenManager.setShopToken(newToken);
 
         // Retry original request

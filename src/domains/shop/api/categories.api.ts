@@ -1,22 +1,22 @@
-import shopClient from '@/infrastructure/http/shop.client';
+﻿import shopClient from '@/infrastructure/http/shop.client';
 
 export const categoriesApi = {
   getAll: (): Promise<any> =>
-    shopClient.get('/v1/admin/categories'),
+    shopClient.get('/admin/categories'),
 
   getById: (id: string): Promise<any> =>
-    shopClient.get(`/v1/admin/categories/${id}`),
+    shopClient.get(`/admin/categories/${id}`),
 
   create: (data: FormData | Record<string, any>): Promise<any> =>
-    shopClient.post('/v1/admin/categories', data,
+    shopClient.post('/admin/categories', data,
       data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
     ),
 
   update: (id: string, data: FormData | Record<string, any>): Promise<any> =>
-    shopClient.put(`/v1/admin/categories/${id}`, data,
+    shopClient.put(`/admin/categories/${id}`, data,
       data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
     ),
 
   delete: (id: string): Promise<any> =>
-    shopClient.delete(`/v1/admin/categories/${id}`),
+    shopClient.delete(`/admin/categories/${id}`),
 };

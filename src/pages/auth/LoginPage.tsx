@@ -29,7 +29,7 @@ export const LoginPage = () => {
       return;
     }
 
-    login.mutate({ email, password });
+    login.mutate({ identifiant: email, password });
   };
 
   return (

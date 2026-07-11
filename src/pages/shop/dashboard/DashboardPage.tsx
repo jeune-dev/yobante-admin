@@ -178,20 +178,23 @@ const OverviewPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
   if (loading) return <Loading />;
 
   const statCards = [
-    { label: 'Total clients',    value: fmt(stats?.totalClients ?? 0),           color: 'blue' },
-    { label: 'Produits actifs',  value: fmt(kpi?.produitsActifs ?? 0),            color: 'green' },
-    { label: 'Total commandes',  value: fmt(stats?.totalCommandes ?? 0),          color: 'gold' },
+    { label: 'Total clients',       value: fmt(stats?.totalClients ?? 0),           color: 'blue' },
+    { label: 'Total vendeurs',      value: fmt(stats?.totalVendeurs ?? 0),           color: 'purple' },
+    { label: 'Total catégories',    value: fmt(stats?.totalCategories ?? 0),         color: 'teal' },
+    { label: 'Produits actifs',     value: fmt(kpi?.produitsActifs ?? 0),            color: 'green' },
+    { label: 'Total commandes',     value: fmt(stats?.totalCommandes ?? 0),          color: 'gold' },
     { label: 'Chiffre d\'affaires', value: fmtMontant(stats?.chiffreAffaires ?? 0), color: 'gold' },
-    { label: 'Produits en attente', value: fmt(kpi?.produitsEnAttente ?? 0),      color: 'red' },
-    { label: 'Rupture de stock', value: fmt(kpi?.produitsEnRupture ?? 0),         color: 'red' },
+    { label: 'Produits en attente', value: fmt(kpi?.produitsEnAttente ?? 0),         color: 'red' },
+    { label: 'Rupture de stock',    value: fmt(kpi?.produitsEnRupture ?? 0),         color: 'red' },
   ];
->>>>>>> e886509716d92c77ea4213693ea7d0d328195f64
 
   const icons = {
-    blue:  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>,
-    green: <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>,
-    gold:  <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
-    red:   <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></>,
+    blue:   <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>,
+    purple: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    teal:   <><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>,
+    green:  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>,
+    gold:   <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+    red:    <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></>,
   };
 
   return (
@@ -294,6 +297,13 @@ const ProduitsPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
   const [confirmAction, setConfirmAction] = useState<() => Promise<void>>(() => async () => {});
   const [confirmMsg, setConfirmMsg] = useState('');
   const [categories, setCategories] = useState<Categorie[]>([]);
+  const [modalCreate, setModalCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [formCreate, setFormCreate] = useState({
+    nom: '', categorieId: '', prix: '', stock: '0',
+    description: '', prixPromo: '', poids: '', reference: '',
+  });
+  const [imgFiles, setImgFiles] = useState<FileList | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -329,6 +339,36 @@ const ProduitsPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
     try { await productsApi.updateStock(selected.id, parseInt(stockVal)); showToast('Stock mis à jour'); setModalStock(false); setStockVal(''); load(); } catch { showToast('Erreur', 'error'); }
   };
 
+  const doCreate = async () => {
+    if (!formCreate.nom.trim()) return showToast('Le nom est obligatoire', 'error');
+    if (!formCreate.categorieId) return showToast('Choisissez une catégorie', 'error');
+    if (!formCreate.prix || isNaN(Number(formCreate.prix)) || Number(formCreate.prix) <= 0)
+      return showToast('Le prix doit être un nombre positif', 'error');
+    setCreating(true);
+    try {
+      const fd = new FormData();
+      fd.append('nom', formCreate.nom.trim());
+      fd.append('categorieId', formCreate.categorieId);
+      fd.append('prix', formCreate.prix);
+      fd.append('stock', formCreate.stock || '0');
+      if (formCreate.description) fd.append('description', formCreate.description);
+      if (formCreate.prixPromo) fd.append('prixPromo', formCreate.prixPromo);
+      if (formCreate.poids) fd.append('poids', formCreate.poids);
+      if (formCreate.reference) fd.append('reference', formCreate.reference);
+      if (imgFiles) Array.from(imgFiles).forEach(f => fd.append('images', f));
+      await productsApi.create(fd);
+      showToast('Produit créé avec succès ✓');
+      setModalCreate(false);
+      setFormCreate({ nom: '', categorieId: '', prix: '', stock: '0', description: '', prixPromo: '', poids: '', reference: '' });
+      setImgFiles(null);
+      load();
+    } catch (e: any) {
+      showToast(e?.message ?? 'Erreur lors de la création', 'error');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const flatCategories = (cats: Categorie[], depth = 0): { cat: Categorie; depth: number }[] =>
     cats.flatMap(c => [{ cat: c, depth }, ...flatCategories(c.sousCategories ?? [], depth + 1)]);
 
@@ -348,6 +388,7 @@ const ProduitsPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
               <option value="valide">Validé</option>
               <option value="rejete">Rejeté</option>
             </select>
+            <button className="db-btn primary" onClick={() => setModalCreate(true)} style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>+ Nouveau produit</button>
           </div>
         </div>
         {loading ? <Loading /> : produits.length === 0 ? <Empty /> : (
@@ -466,6 +507,50 @@ const ProduitsPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
           <div className="db-modal-footer" style={{ padding: 0 }}>
             <button className="db-btn secondary" onClick={() => setModalRejet(false)}>Annuler</button>
             <button className="db-btn confirm" onClick={doRejeter}>Rejeter</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Créer Produit */}
+      <Modal open={modalCreate} title="Nouveau produit" onClose={() => setModalCreate(false)} wide>
+        <div className="db-card-body">
+          <div className="db-grid-2">
+            <Input label="Nom du produit *" value={formCreate.nom} onChange={e => setFormCreate(f => ({ ...f, nom: e.target.value }))} placeholder="Ex: Robe en bazin" />
+            <div className="db-form-group">
+              <label className="db-form-label">Catégorie *</label>
+              <select className="db-form-input db-form-select" value={formCreate.categorieId} onChange={e => setFormCreate(f => ({ ...f, categorieId: e.target.value }))}>
+                <option value="">-- Choisir --</option>
+                {flatCategories(categories).map(({ cat, depth }) => (
+                  <option key={cat.id} value={cat.id}>{' '.repeat(depth * 3)}{cat.nom}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="db-grid-2">
+            <Input label="Prix (FCFA) *" type="number" min="0" value={formCreate.prix} onChange={e => setFormCreate(f => ({ ...f, prix: e.target.value }))} placeholder="Ex: 15000" />
+            <Input label="Prix promo (FCFA)" type="number" min="0" value={formCreate.prixPromo} onChange={e => setFormCreate(f => ({ ...f, prixPromo: e.target.value }))} placeholder="Optionnel" />
+          </div>
+          <div className="db-grid-2">
+            <Input label="Stock initial" type="number" min="0" value={formCreate.stock} onChange={e => setFormCreate(f => ({ ...f, stock: e.target.value }))} />
+            <Input label="Référence" value={formCreate.reference} onChange={e => setFormCreate(f => ({ ...f, reference: e.target.value }))} placeholder="Optionnel" />
+          </div>
+          <Input label="Poids (kg)" type="number" min="0" step="0.01" value={formCreate.poids} onChange={e => setFormCreate(f => ({ ...f, poids: e.target.value }))} placeholder="Optionnel" />
+          <Textarea label="Description" value={formCreate.description} onChange={e => setFormCreate(f => ({ ...f, description: e.target.value }))} placeholder="Description du produit…" />
+          <div className="db-form-group">
+            <label className="db-form-label">Images</label>
+            <input type="file" accept="image/*" multiple className="db-form-input" style={{ padding: '0.5rem' }}
+              onChange={e => setImgFiles(e.target.files)} />
+            {imgFiles && imgFiles.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {Array.from(imgFiles).map((f, i) => (
+                  <img key={i} src={URL.createObjectURL(f)} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="db-modal-footer" style={{ padding: 0 }}>
+            <button className="db-btn secondary" onClick={() => setModalCreate(false)}>Annuler</button>
+            <button className="db-btn primary" onClick={doCreate} disabled={creating}>{creating ? 'Création…' : 'Créer le produit'}</button>
           </div>
         </div>
       </Modal>
@@ -1045,9 +1130,22 @@ const VendeursPanel = ({ showToast }: { showToast: (m: string, t?: ToastType) =>
     catch { showToast('Erreur', 'error'); }
   };
   const doCreate = async () => {
-    if (!form.nom || !form.email || !form.password || !form.nomBoutique) return showToast('Champs requis manquants', 'error');
-    try { await vendorsApi.create(form as any); showToast('Vendeur créé ✓'); setModalCreate(false); load(); }
-    catch (e: any) { showToast(e?.message ?? 'Erreur', 'error'); }
+    if (!form.nom || !form.prenom || !form.email || !form.password || !form.nomBoutique)
+      return showToast('Tous les champs obligatoires (*) doivent être remplis', 'error');
+    if (/\d/.test(form.nom) || /\d/.test(form.prenom))
+      return showToast('Le nom et le prénom ne doivent pas contenir de chiffres', 'error');
+    if (!form.email.includes('@'))
+      return showToast('L\'adresse email est invalide', 'error');
+    if (form.password.length < 6)
+      return showToast('Le mot de passe doit contenir au moins 6 caractères', 'error');
+    try {
+      await vendorsApi.create(form as any);
+      showToast('Boutique créée avec succès ✓');
+      setModalCreate(false);
+      setForm({ nom: '', prenom: '', email: '', password: '', telephone: '', nomBoutique: '', description: '' });
+      load();
+    }
+    catch (e: any) { showToast(e?.message ?? 'Erreur lors de la création', 'error'); }
   };
 
   const getStatutVendeur = (v: Vendeur) => {
@@ -1474,7 +1572,7 @@ const FraisLivraisonPanel = ({ showToast }: { showToast: (m: string, t?: ToastTy
   const load = () => {
     setLoading(true);
     fraisLivraisonApi.getAll()
-      .then(r => setFrais(r?.data?.fraisLivraison ?? []))
+      .then(r => setFrais(r?.data?.frais ?? []))
       .catch(() => showToast('Erreur', 'error'))
       .finally(() => setLoading(false));
   };

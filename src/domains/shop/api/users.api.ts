@@ -1,4 +1,4 @@
-import shopClient from '@/infrastructure/http/shop.client';
+﻿import shopClient from '@/infrastructure/http/shop.client';
 
 export interface UserFilters {
   search?: string;
@@ -10,11 +10,11 @@ export interface UserFilters {
 
 export const usersApi = {
   getAll: (filters?: UserFilters): Promise<any> =>
-    shopClient.get('/v1/admin/users', { params: filters }),
+    shopClient.get('/admin/users', { params: filters }),
 
   getById: (id: string): Promise<any> =>
-    shopClient.get(`/v1/admin/users/${id}`),
+    shopClient.get(`/admin/users/${id}`),
 
   toggleActivation: (id: string): Promise<any> =>
-    shopClient.patch(`/v1/admin/users/${id}/toggle`),
+    shopClient.patch(`/admin/users/${id}/toggle`),
 };
