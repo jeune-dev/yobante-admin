@@ -1,5 +1,6 @@
 ﻿const KEYS = {
   SHOP: 'token_shop',
+  SHOP_REFRESH: 'refresh_token_shop',
   SHIPMENT: 'token_shipment',
 } as const;
 
@@ -15,6 +16,15 @@ export const tokenManager = {
 
   removeShopToken: (): void => {
     localStorage.removeItem(KEYS.SHOP);
+  },
+
+  // Shop refresh token (envoyé dans le body de /auth/refresh)
+  getShopRefreshToken: (): string | null => {
+    return localStorage.getItem(KEYS.SHOP_REFRESH);
+  },
+
+  setShopRefreshToken: (token: string): void => {
+    localStorage.setItem(KEYS.SHOP_REFRESH, token);
   },
 
   // Shipment tokens
@@ -33,6 +43,7 @@ export const tokenManager = {
   // Clear all tokens (logout)
   clearAll: (): void => {
     localStorage.removeItem(KEYS.SHOP);
+    localStorage.removeItem(KEYS.SHOP_REFRESH);
     localStorage.removeItem(KEYS.SHIPMENT);
   },
 };

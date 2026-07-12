@@ -14,7 +14,7 @@ export const useAuth = () => {
 
   const selectApp = (app: 'shop' | 'shipment') => {
     setSelectedApp(app);
-    navigate(app === 'shop' ? '/shop/dashboard' : '/shipment/dashboard');
+    navigate(app === 'shop' ? '/boutique/dashboard' : '/colis/dashboard');
   };
 
   const handleLogout = async () => {

@@ -2,7 +2,7 @@
 import { persist } from 'zustand/middleware';
 import { tokenManager } from '@/infrastructure/auth/tokenManager';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   nom: string;
@@ -60,6 +60,8 @@ export const useAuthStore = create<AuthStore>()(
         isAuthenticated: state.isAuthenticated,
         selectedApp: state.selectedApp,
         user: state.user,
+        isShopAvailable: state.isShopAvailable,
+        isShipmentAvailable: state.isShipmentAvailable,
       }),
     }
   )

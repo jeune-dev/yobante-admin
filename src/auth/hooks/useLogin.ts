@@ -1,5 +1,6 @@
 ﻿import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { authService, LoginPayload } from '@/auth/services/auth.service';
 import { useAuthStore } from '@/auth/store/auth.store';
 
@@ -16,8 +17,15 @@ export const useLogin = () => {
       setLoading(true);
     },
     onSuccess: (result) => {
+      // Aucun backend n'a authentifié l'utilisateur → identifiants invalides / serveur injoignable
       if (!result.user) {
-        throw new Error('No user data received');
+        const message =
+          result.shop.error?.message ||
+          result.shipment.error?.message ||
+          'Identifiant ou mot de passe incorrect';
+        toast.error(message);
+        setLoading(false);
+        return;
       }
 
       // Store user and token availability
@@ -25,21 +33,14 @@ export const useLogin = () => {
       setAuthenticated(true);
       setTokenAvailability(result.shop.success, result.shipment.success);
 
-      // If only one backend is available, redirect directly
-      if (result.shop.success && !result.shipment.success) {
-        useAuthStore.getState().setSelectedApp('shop');
-        navigate('/shop/dashboard');
-      } else if (!result.shop.success && result.shipment.success) {
-        useAuthStore.getState().setSelectedApp('shipment');
-        navigate('/shipment/dashboard');
-      } else if (result.shop.success && result.shipment.success) {
-        // Both available - go to selection page
-        navigate('/select-app');
-      }
+      // On affiche TOUJOURS la page de choix d'espace (Boutique / Colis).
+      useAuthStore.getState().setSelectedApp(null);
+      navigate('/select-app');
 
       setLoading(false);
     },
     onError: () => {
+      toast.error('Connexion impossible. Réessayez.');
       setLoading(false);
     },
   });
