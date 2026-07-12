@@ -1,4 +1,4 @@
-import shopClient from '@/infrastructure/http/shop.client';
+﻿import shopClient from '@/infrastructure/http/shop.client';
 import type { StatutCommande } from '../types';
 
 export interface OrderFilters {
@@ -12,11 +12,11 @@ export interface OrderFilters {
 
 export const ordersApi = {
   getAll: (filters?: OrderFilters): Promise<any> =>
-    shopClient.get('/v1/admin/commandes', { params: filters }),
+    shopClient.get('/admin/commandes', { params: filters }),
 
   getById: (id: string): Promise<any> =>
-    shopClient.get(`/v1/admin/commandes/${id}`),
+    shopClient.get(`/admin/commandes/${id}`),
 
   updateStatut: (id: string, statut: StatutCommande, noteAdmin?: string): Promise<any> =>
-    shopClient.patch(`/v1/admin/commandes/${id}/statut`, { statut, noteAdmin }),
+    shopClient.patch(`/admin/commandes/${id}/statut`, { statut, noteAdmin }),
 };

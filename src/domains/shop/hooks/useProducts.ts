@@ -1,11 +1,59 @@
-﻿// domains/shop/hooks/useProducts.ts — TanStack Query hooks pour les produits
-// import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-// import { QUERY_KEYS } from '@/shared/constants/queryKeys'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { productsApi, ProductFilters } from '@/domains/shop/api/products.api';
 
-// TODO: useProducts(filters) -> useQuery({ queryKey: [QUERY_KEYS.SHOP.PRODUCTS, filters], queryFn: () => productsApi.getProducts(filters) })
-// TODO: useProduct(id)       -> useQuery({ queryKey: [QUERY_KEYS.SHOP.PRODUCT, id], ... })
-// TODO: useCreateProduct()   -> useMutation({ mutationFn: productsApi.createProduct, onSuccess: invalidate PRODUCTS })
-// TODO: useUpdateProduct()   -> useMutation({ mutationFn: ({ id, data }) => productsApi.updateProduct(id, data) })
-// TODO: useDeleteProduct()   -> useMutation({ mutationFn: productsApi.deleteProduct, onSuccess: toast + invalidate })
-// TODO: useUpdateStock()     -> useMutation(...)
-// TODO: useToggleFeatured()  -> useMutation(...)
+const KEY = 'shop-products';
+
+export const useProducts = (filters: ProductFilters = {}) =>
+  useQuery({
+    queryKey: [KEY, filters],
+    queryFn: () => productsApi.getAll(filters),
+    staleTime: 30_000,
+  });
+
+export const useCreateProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => productsApi.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useUpdateProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: FormData }) => productsApi.update(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useDeleteProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => productsApi.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useToggleVisibilite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => productsApi.toggleVisibilite(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useToggleFeatured = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => productsApi.toggleFeatured(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};
+
+export const useUpdateStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, quantite }: { id: number; quantite: number }) => productsApi.updateStock(id, quantite),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
+  });
+};

@@ -16,6 +16,7 @@ export const useLogin = () => {
       setLoading(true);
     },
     onSuccess: (result) => {
+      console.log('Login result:', result);
       if (!result.user) {
         throw new Error('No user data received');
       }
@@ -28,10 +29,10 @@ export const useLogin = () => {
       // If only one backend is available, redirect directly
       if (result.shop.success && !result.shipment.success) {
         useAuthStore.getState().setSelectedApp('shop');
-        navigate('/shop/dashboard');
+        navigate('/boutique/dashboard');
       } else if (!result.shop.success && result.shipment.success) {
         useAuthStore.getState().setSelectedApp('shipment');
-        navigate('/shipment/dashboard');
+        navigate('/colis/dashboard');
       } else if (result.shop.success && result.shipment.success) {
         // Both available - go to selection page
         navigate('/select-app');
