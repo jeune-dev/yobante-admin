@@ -1,29 +1,55 @@
-﻿// domains/shop/api/products.api.ts — Appels API Boutique / Produits
-// import shopClient from '@/infrastructure/http/shop.client'
+﻿import shopClient from '@/infrastructure/http/shop.client';
+import type { Produit } from '../types';
 
-// TODO: getProducts(filters: ProductFilters): Promise<PaginatedResponse<Product>>
-//   -> shopClient.get('/admin/produits', { params: filters })
+export interface ProductFilters {
+  search?: string;
+  categorieId?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  prixMin?: number;
+  prixMax?: number;
+  page?: number;
+  limit?: number;
+}
 
-// TODO: getProductById(id: string): Promise<Product>
-//   -> shopClient.get(/admin/produits/)
+export const productsApi = {
+  getAll: (filters?: ProductFilters): Promise<any> =>
+    shopClient.get('/admin/produits', { params: filters }),
 
-// TODO: createProduct(data: FormData): Promise<Product>
-//   -> shopClient.post('/admin/produits', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+  getById: (id: string): Promise<any> =>
+    shopClient.get(`/admin/produits/${id}`),
 
-// TODO: updateProduct(id: string, data: FormData): Promise<Product>
-//   -> shopClient.put(/admin/produits/, data)
+  getAValider: (): Promise<any> =>
+    shopClient.get('/admin/produits/a-valider'),
 
-// TODO: deleteProduct(id: string): Promise<void>
-//   -> shopClient.delete(/admin/produits/)
+  create: (data: FormData): Promise<any> =>
+    shopClient.post('/admin/produits', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
-// TODO: updateStock(id: string, quantite: number): Promise<Product>
-//   -> shopClient.patch(/admin/produits//stock, { quantite })
+  update: (id: string, data: FormData | Record<string, any>): Promise<any> =>
+    shopClient.put(`/admin/produits/${id}`, data,
+      data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {}
+    ),
 
-// TODO: toggleFeatured(id: string): Promise<Product>
-//   -> shopClient.patch(/admin/produits//featured)
+  delete: (id: string): Promise<any> =>
+    shopClient.delete(`/admin/produits/${id}`),
 
-// TODO: toggleVisibilite(id: string): Promise<Product>
-//   -> shopClient.patch(/admin/produits//visibilite)
+  updateStock: (id: string, quantite: number): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/stock`, { quantite }),
 
-// TODO: importProducts(file: File): Promise<{ created: number, errors: any[] }>
-//   -> shopClient.post('/admin/produits/import', formData)
+  toggleFeatured: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/featured`),
+
+  toggleVisibilite: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/visibilite`),
+
+  validerStep1: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/valider-step1`),
+
+  validerStep2: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/valider-step2`),
+
+  rejeter: (id: string, motif?: string): Promise<any> =>
+    shopClient.patch(`/admin/produits/${id}/rejeter`, { motif }),
+};

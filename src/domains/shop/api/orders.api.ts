@@ -1,26 +1,22 @@
-﻿// domains/shop/api/orders.api.ts — Appels API Boutique / Commandes
-// import shopClient from '@/infrastructure/http/shop.client'
+﻿import shopClient from '@/infrastructure/http/shop.client';
+import type { StatutCommande } from '../types';
 
-// TODO: getOrders(filters: OrderFilters): Promise<PaginatedResponse<Order>>
-//   -> shopClient.get('/admin/commandes', { params: filters })
+export interface OrderFilters {
+  statut?: StatutCommande;
+  userId?: string;
+  dateDebut?: string;
+  dateFin?: string;
+  page?: number;
+  limit?: number;
+}
 
-// TODO: getOrderById(id: string): Promise<Order>
-//   -> shopClient.get(/admin/commandes/)
+export const ordersApi = {
+  getAll: (filters?: OrderFilters): Promise<any> =>
+    shopClient.get('/admin/commandes', { params: filters }),
 
-// TODO: validateOrder(id: string, noteAdmin?: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//valider, { noteAdmin })
+  getById: (id: string): Promise<any> =>
+    shopClient.get(`/admin/commandes/${id}`),
 
-// TODO: rejectOrder(id: string, raison: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//rejeter, { raison })
-
-// TODO: markPreparing(id: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//preparation)
-
-// TODO: markShipped(id: string, trackingInfo: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//expedier, { trackingInfo })
-
-// TODO: markDelivered(id: string): Promise<Order>
-//   -> shopClient.patch(/admin/commandes//livrer)
-
-// TODO: exportOrders(filters: OrderFilters, format: 'csv' | 'xlsx'): Promise<Blob>
-//   -> shopClient.get('/admin/commandes/export', { params: { ...filters, format }, responseType: 'blob' })
+  updateStatut: (id: string, statut: StatutCommande, noteAdmin?: string): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/statut`, { statut, noteAdmin }),
+};

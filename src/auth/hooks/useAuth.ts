@@ -1,6 +1,8 @@
 ﻿import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/auth/store/auth.store';
+import { useAuthStore, type User } from '@/auth/store/auth.store';
 import { authService } from '@/auth/services/auth.service';
+
+export type { User };
 
 export const useAuth = () => {
   const navigate = useNavigate();
