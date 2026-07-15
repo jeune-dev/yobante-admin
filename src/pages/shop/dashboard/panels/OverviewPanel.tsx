@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDashboardOverview, useDashboardStats } from '@/domains/shop/hooks/useAdminBoutique';
+import { useDashboardOverview, useDashboardStats, useVendeurs, useCategories } from '@/domains/shop/hooks/useAdminBoutique';
 import Icon from '@/shared/components/dashboard/Icon';
 import { fcfa } from './_state';
 
@@ -23,18 +23,24 @@ const iconBox = (color: string): React.CSSProperties => ({
 });
 
 export default function OverviewPanel() {
-  const overview = useDashboardOverview();
-  const fallback = useDashboardStats();
+  const overview   = useDashboardOverview();
+  const fallback   = useDashboardStats();
+  // Utilisés uniquement si le backend ne renvoie pas encore ces champs
+  const { data: vendeursData }    = useVendeurs();
+  const { data: categoriesData }  = useCategories();
 
-  // Si /overview n'est pas encore déployé, on se rabat sur /stats
   const isLoading = overview.isLoading || (overview.isError && fallback.isLoading);
   const isError   = overview.isError && fallback.isError;
   const d         = ((overview.isError ? fallback.data : overview.data) ?? overview.data) as any;
 
+  // Fallback pour les champs absents de l'ancien /stats
+  const totalVendeurs   = d?.totalVendeurs   || (vendeursData   as any)?.pagination?.total || (vendeursData   as any)?.vendeurs?.length   || 0;
+  const totalCategories = d?.totalCategories || (categoriesData as any)?.categories?.length || 0;
+
   const kpis = [
-    { label: 'Total clients',       value: d?.totalClients       ?? 0,           icon: 'users',          color: '#7c3aed' },
-    { label: 'Total vendeurs',      value: d?.totalVendeurs      ?? 0,           icon: 'store',          color: '#8b5cf6' },
-    { label: 'Total catégories',    value: d?.totalCategories    ?? 0,           icon: 'list',           color: '#2a7fac' },
+    { label: 'Total clients',       value: d?.totalClients       ?? 0,  icon: 'users',          color: '#7c3aed' },
+    { label: 'Total vendeurs',      value: totalVendeurs,               icon: 'store',          color: '#8b5cf6' },
+    { label: 'Total catégories',    value: totalCategories,             icon: 'list',           color: '#2a7fac' },
     { label: 'Total produits',      value: d?.totalProduits      ?? 0,           icon: 'shopping-bag',   color: '#0891b2' },
     { label: 'Total commandes',     value: d?.totalCommandes     ?? 0,           icon: 'package',        color: '#059669' },
     { label: "Chiffre d'affaires",  value: fcfa(d?.chiffreAffaires ?? 0),       icon: 'coins',          color: '#b8860b' },
