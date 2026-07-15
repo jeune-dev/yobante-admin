@@ -1,7 +1,30 @@
 import React from 'react';
-import { useDashboardOverview, useDashboardStats, useVendeurs, useCategories, useProduits } from '@/domains/shop/hooks/useAdminBoutique';
+import {
+  useDashboardOverview, useDashboardStats,
+  useVendeurs, useCategories, useProduits,
+  useRevenus, useCommandesParStatut,
+} from '@/domains/shop/hooks/useAdminBoutique';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 import Icon from '@/shared/components/dashboard/Icon';
 import { fcfa } from './_state';
+
+const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+const STATUT_COLORS: Record<string, string> = {
+  en_attente:  '#f59e0b',
+  confirmee:   '#3b82f6',
+  en_cours:    '#8b5cf6',
+  expediee:    '#0891b2',
+  livree:      '#10b981',
+  annulee:     '#ef4444',
+};
+const STATUT_LABELS: Record<string, string> = {
+  en_attente: 'En attente', confirmee: 'Confirmée', en_cours: 'En cours',
+  expediee: 'Expédiée', livree: 'Livrée', annulee: 'Annulée',
+};
 
 const card = (): React.CSSProperties => ({
   background: '#fff',
@@ -52,6 +75,20 @@ export default function OverviewPanel() {
 
   const tops: any[]    = d?.topProduits   ?? [];
   const clients: any[] = d?.clientsActifs ?? [];
+
+  const { data: revenusRaw }  = useRevenus();
+  const { data: statutsRaw }  = useCommandesParStatut();
+
+  const revenusData = ((revenusRaw as any)?.revenus ?? []).map((r: any) => ({
+    mois: MOIS[r.mois - 1],
+    revenus: r.revenus,
+  }));
+
+  const statutsData = ((statutsRaw as any)?.stats ?? []).map((s: any) => ({
+    name: STATUT_LABELS[s.statut] ?? s.statut,
+    value: Number(s.count),
+    color: STATUT_COLORS[s.statut] ?? '#9ca3af',
+  }));
 
   if (isError) {
     return (
@@ -142,6 +179,65 @@ export default function OverviewPanel() {
           )}
         </div>
       </div>
+
+      {/* Graphiques */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+
+        {/* Revenus par mois */}
+        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.05)', padding: '1.2rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '1rem' }}>Revenus par mois ({new Date().getFullYear()})</div>
+          {revenusData.length === 0 || revenusData.every((r: any) => r.revenus === 0) ? (
+            <p style={{ color: '#aaa', textAlign: 'center', padding: '3rem 0' }}>Aucune donnée</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={revenusData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#1a56db" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#1a56db" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="mois" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [fcfa(v), 'Revenus']} labelStyle={{ fontWeight: 600 }} contentStyle={{ borderRadius: 8, fontSize: '0.82rem' }} />
+                <Area type="monotone" dataKey="revenus" stroke="#1a56db" strokeWidth={2} fill="url(#colorRev)" dot={{ r: 3, fill: '#1a56db' }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Commandes par statut */}
+        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.05)', padding: '1.2rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '1rem' }}>Commandes par statut</div>
+          {statutsData.length === 0 ? (
+            <p style={{ color: '#aaa', textAlign: 'center', padding: '3rem 0' }}>Aucune donnée</p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie data={statutsData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {statutsData.map((entry: any, i: number) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: number, name: string) => [v, name]} contentStyle={{ borderRadius: 8, fontSize: '0.82rem' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 8 }}>
+                {statutsData.map((s: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                    <span style={{ color: '#555', flex: 1 }}>{s.name}</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -26,6 +26,12 @@ const DASHBOARD_OPTS = { staleTime: 60_000, refetchInterval: 60_000 } as const;
 export const useDashboardStats = () =>
   useQuery({ queryKey: boutiqueKeys.stats, queryFn: api.getDashboardStats, ...DASHBOARD_OPTS });
 
+export const useRevenus = (annee?: number) =>
+  useQuery({ queryKey: ['boutique', 'revenus', annee], queryFn: () => api.getRevenus(annee), ...DASHBOARD_OPTS });
+
+export const useCommandesParStatut = () =>
+  useQuery({ queryKey: ['boutique', 'commandes-statut'], queryFn: api.getCommandesParStatut, ...DASHBOARD_OPTS });
+
 export const useDashboardOverview = () =>
   useQuery({ queryKey: ['boutique', 'overview'], queryFn: api.getDashboardOverview, ...DASHBOARD_OPTS });
 

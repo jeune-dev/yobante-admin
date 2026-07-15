@@ -37,6 +37,11 @@ export const getDashboardOverview = () =>
 export const getCommandesParStatut = () =>
   unwrap<{ stats: any[] }>(shopClient.get('/admin/dashboard/commandes-statut'));
 
+export const getRevenus = (annee?: number) =>
+  unwrap<{ revenus: { mois: number; revenus: number }[] }>(
+    shopClient.get('/admin/dashboard/revenus', annee ? { params: { annee } } : {})
+  );
+
 export const getTopProduits = () =>
   unwrap<{ produits: any[] }>(shopClient.get('/admin/dashboard/top-produits'));
 
