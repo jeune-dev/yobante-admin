@@ -1,64 +1,53 @@
-import { useState } from 'react';
+import { useShipmentStats } from '@/domains/shipment/hooks/useDashboard';
 
-const PERIODES = [
-  { id: 'jour', label: "Aujourd'hui" },
-  { id: 'semaine', label: 'Cette semaine' },
-  { id: 'mois', label: 'Ce mois' },
-  { id: 'personnalise', label: 'Personnalisé' },
-] as const;
-
-type PeriodeId = (typeof PERIODES)[number]['id'];
-
-const FAKE_DATA: Record<PeriodeId, { total: number; franceSenegal: number; senegalFrance: number; enAttente: number }> = {
-  jour: { total: 3, franceSenegal: 2, senegalFrance: 1, enAttente: 1 },
-  semaine: { total: 18, franceSenegal: 12, senegalFrance: 6, enAttente: 4 },
-  mois: { total: 64, franceSenegal: 42, senegalFrance: 22, enAttente: 9 },
-  personnalise: { total: 0, franceSenegal: 0, senegalFrance: 0, enAttente: 0 },
+const COLOR_MAP: Record<string, string> = {
+  blue: '#1a56db', green: '#065f46', gold: '#b8860b', red: '#991b1b', purple: '#5b21b6',
 };
 
 export default function OverviewPanel() {
-  const [periode, setPeriode] = useState<PeriodeId>('mois');
-  const [dateDebut, setDateDebut] = useState('');
-  const [dateFin, setDateFin] = useState('');
+  const { data, isLoading, isError } = useShipmentStats();
 
-  const data = FAKE_DATA[periode];
+  const d = (data as any)?.stats ?? (data as any) ?? {};
 
   const kpis = [
-    { label: 'Total colis envoyés', value: data.total, color: 'blue' },
-    { label: 'France → Sénégal', value: data.franceSenegal, color: 'green' },
-    { label: 'Sénégal → France', value: data.senegalFrance, color: 'gold' },
-    { label: 'En attente de validation', value: data.enAttente, color: 'red' },
+    { label: 'Total colis', value: d.totalColis ?? d.total ?? 0, color: 'blue' },
+    { label: 'France → Sénégal', value: d.franceSenegal ?? d.colis_france_senegal ?? 0, color: 'green' },
+    { label: 'Sénégal → France', value: d.senegalFrance ?? d.colis_senegal_france ?? 0, color: 'gold' },
+    { label: 'En attente validation', value: d.enAttente ?? d.colis_en_attente ?? 0, color: 'red' },
+    { label: 'Total clients', value: d.totalClients ?? d.clients ?? 0, color: 'purple' },
+    { label: 'Total conteneurs', value: d.totalConteneurs ?? d.conteneurs ?? 0, color: 'blue' },
   ];
 
-  return (
-    <div>
-      <div className="db-card" style={{ marginBottom: '1.3rem' }}>
-        <div className="db-card-body" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', padding: '1rem' }}>
-          <span style={{ fontSize: '0.82rem', color: '#888', fontWeight: 600, marginRight: 4 }}>Période :</span>
-          {PERIODES.map((p) => (
-            <button key={p.id} className={`db-chip${periode === p.id ? ' active' : ''}`} onClick={() => setPeriode(p.id)}>
-              {p.label}
-            </button>
-          ))}
-          {periode === 'personnalise' && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '0.5rem' }}>
-              <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} className="db-form-input" style={{ width: 160, padding: '0.4rem 0.7rem', fontSize: '0.85rem' }} />
-              <span style={{ color: '#888', fontSize: '0.85rem' }}>→</span>
-              <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className="db-form-input" style={{ width: 160, padding: '0.4rem 0.7rem', fontSize: '0.85rem' }} />
-            </div>
-          )}
-        </div>
-      </div>
-
+  if (isLoading) {
+    return (
       <div className="db-stats-grid">
-        {kpis.map((kpi, i) => (
-          <div className="db-stat-card" key={i}>
-            <div className={`db-stat-icon ${kpi.color}`} />
-            <div className="db-stat-value">{kpi.value}</div>
-            <div className="db-stat-label">{kpi.label}</div>
+        {kpis.map((_, i) => (
+          <div className="db-stat-card" key={i} style={{ opacity: 0.4 }}>
+            <div className="db-stat-value" style={{ background: '#e5e7eb', borderRadius: 8, height: 32, width: 60 }} />
+            <div className="db-stat-label" style={{ background: '#e5e7eb', borderRadius: 4, height: 14, width: 100, marginTop: 8 }} />
           </div>
         ))}
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="db-card" style={{ padding: '2rem', textAlign: 'center', color: '#991b1b' }}>
+        Impossible de charger les statistiques
+      </div>
+    );
+  }
+
+  return (
+    <div className="db-stats-grid">
+      {kpis.map((kpi, i) => (
+        <div className="db-stat-card" key={i}>
+          <div className="db-stat-icon" style={{ background: `${COLOR_MAP[kpi.color]}22`, color: COLOR_MAP[kpi.color] }} />
+          <div className="db-stat-value">{kpi.value.toLocaleString('fr-FR')}</div>
+          <div className="db-stat-label">{kpi.label}</div>
+        </div>
+      ))}
     </div>
   );
 }

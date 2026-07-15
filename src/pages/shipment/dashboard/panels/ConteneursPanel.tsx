@@ -1,44 +1,57 @@
 import { useState } from 'react';
+import { useConteneurs, useCreateConteneur, useUpdateStatutConteneur } from '@/domains/shipment/hooks/useConteneurs';
+import Pagination from '@/shared/components/dashboard/Pagination';
 import Icon from '@/shared/components/dashboard/Icon';
 
+const PAGE_SIZE = 10;
+
 interface Conteneur {
-  id: number;
-  numero: string;
-  statut: string;
-  date_depart: string;
-  date_arrivee: string;
+  _id?: string;
+  id?: string | number;
+  numero?: string;
+  statut?: string;
+  dateDepart?: string;
+  date_depart?: string;
+  dateArrivee?: string;
+  date_arrivee?: string;
+  direction?: string;
 }
 
-const FAKE_CONTENEURS: Conteneur[] = [
-  { id: 1, numero: 'CONT-001', statut: 'ouvert', date_depart: '2026-04-15', date_arrivee: '2026-04-22' },
-  { id: 2, numero: 'CONT-002', statut: 'en_transit', date_depart: '2026-04-08', date_arrivee: '2026-04-15' },
-  { id: 3, numero: 'CONT-003', statut: 'arrive', date_depart: '2026-03-28', date_arrivee: '2026-04-04' },
-  { id: 4, numero: 'CONT-004', statut: 'ferme', date_depart: '2026-04-20', date_arrivee: '2026-04-27' },
-];
+const cId = (c: Conteneur) => String(c._id ?? c.id ?? '');
+const cNum = (c: Conteneur) => c.numero ?? cId(c).slice(0, 8).toUpperCase();
+const cDateDepart = (c: Conteneur) => c.dateDepart ?? c.date_depart ?? '—';
+const cDateArrivee = (c: Conteneur) => c.dateArrivee ?? c.date_arrivee ?? '—';
 
 const STATUTS: Record<string, { label: string; background: string; color: string }> = {
-  ouvert: { label: 'Ouvert', background: '#d1fae5', color: '#065f46' },
-  ferme: { label: 'Fermé', background: '#fee2e2', color: '#991b1b' },
+  ouvert:     { label: 'Ouvert',     background: '#d1fae5', color: '#065f46' },
+  ferme:      { label: 'Fermé',      background: '#fee2e2', color: '#991b1b' },
   en_transit: { label: 'En transit', background: '#e0f2fe', color: '#075985' },
-  arrive: { label: 'Arrivé', background: '#dcfce7', color: '#166534' },
+  arrive:     { label: 'Arrivé',     background: '#dcfce7', color: '#166534' },
 };
 
-const EMPTY = { numero: '', statut: 'ouvert', date_depart: '', date_arrivee: '' };
+const EMPTY = { numero: '', statut: 'ouvert', dateDepart: '', dateArrivee: '', direction: '' };
 
 export default function ConteneursPanel() {
-  const [conteneurs, setConteneurs] = useState<Conteneur[]>(FAKE_CONTENEURS);
+  const [page, setPage]   = useState(1);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm]   = useState(EMPTY);
+
+  const { data, isLoading, isError } = useConteneurs({ page, limit: PAGE_SIZE });
+  const creer         = useCreateConteneur();
+  const updateStatut  = useUpdateStatutConteneur();
+
+  const conteneurs: Conteneur[] = (data as any)?.conteneurs ?? (data as any)?.data ?? [];
+  const total: number           = (data as any)?.pagination?.total ?? (data as any)?.total ?? conteneurs.length;
 
   const handleAjouter = () => {
     if (!form.numero) return;
-    setConteneurs((prev) => [{ id: Date.now(), ...form }, ...prev]);
-    setModal(false);
-    setForm(EMPTY);
+    creer.mutate(
+      { numero: form.numero, statut: form.statut, dateDepart: form.dateDepart || undefined, dateArrivee: form.dateArrivee || undefined, direction: form.direction || undefined },
+      { onSuccess: () => { setModal(false); setForm(EMPTY); } }
+    );
   };
 
-  const changerStatut = (id: number, newStatut: string) =>
-    setConteneurs((prev) => prev.map((c) => (c.id === id ? { ...c, statut: newStatut } : c)));
+  const st = (statut?: string) => STATUTS[statut ?? ''] ?? { label: statut ?? '—', background: '#f3f4f6', color: '#374151' };
 
   return (
     <div>
@@ -55,36 +68,48 @@ export default function ConteneursPanel() {
                 <th>Statut</th>
                 <th>Date de départ</th>
                 <th>Date d'arrivée prévue</th>
-                <th>Info</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {conteneurs.map((c) => (
-                <tr key={c.id}>
-                  <td className="db-td-bold">{c.numero}</td>
-                  <td>
-                    <select
-                      value={c.statut}
-                      onChange={(e) => changerStatut(c.id, e.target.value)}
-                      style={{ background: STATUTS[c.statut]?.background, color: STATUTS[c.statut]?.color, border: 'none', borderRadius: 20, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', outline: 'none' }}
-                    >
-                      {Object.entries(STATUTS).map(([key, val]) => (
-                        <option key={key} value={key}>{val.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{c.date_depart || '—'}</td>
-                  <td>{c.date_arrivee || '—'}</td>
-                  <td>
-                    <span style={{ fontSize: '0.82rem', color: '#888' }}>
-                      {c.statut === 'ouvert' ? 'Accepte des colis' : c.statut === 'ferme' ? 'Fermé' : c.statut === 'en_transit' ? 'En route' : 'Arrivé'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {isLoading ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Chargement…</td></tr>
+              ) : isError ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#991b1b' }}>Erreur de chargement</td></tr>
+              ) : conteneurs.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Aucun conteneur</td></tr>
+              ) : conteneurs.map((c) => {
+                const s = st(c.statut);
+                return (
+                  <tr key={cId(c)}>
+                    <td className="db-td-bold">{cNum(c)}</td>
+                    <td>
+                      <span style={{ background: s.background, color: s.color, padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600 }}>{s.label}</span>
+                    </td>
+                    <td>{cDateDepart(c)}</td>
+                    <td>{cDateArrivee(c)}</td>
+                    <td>
+                      <div className="db-actions">
+                        {Object.entries(STATUTS).filter(([key]) => key !== c.statut).map(([key, val]) => (
+                          <button
+                            key={key}
+                            className="db-btn-ghost"
+                            style={{ color: val.color, borderColor: val.color, fontSize: '0.75rem' }}
+                            disabled={updateStatut.isPending}
+                            onClick={() => updateStatut.mutate({ id: cId(c), statut: key })}
+                          >
+                            → {val.label}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={PAGE_SIZE} onChange={setPage} />
       </div>
 
       {modal && (
@@ -96,31 +121,31 @@ export default function ConteneursPanel() {
             </div>
             <div style={{ padding: '0 1.65rem' }}>
               <div className="db-form-group">
-                <label className="db-form-label">Numéro du conteneur</label>
+                <label className="db-form-label">Numéro du conteneur *</label>
                 <input className="db-form-input" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} placeholder="Ex: CONT-005" />
               </div>
               <div className="db-form-group">
-                <label className="db-form-label">Statut</label>
+                <label className="db-form-label">Statut initial</label>
                 <select className="db-form-input db-form-select" value={form.statut} onChange={(e) => setForm({ ...form, statut: e.target.value })}>
-                  {Object.entries(STATUTS).map(([key, val]) => (
-                    <option key={key} value={key}>{val.label}</option>
-                  ))}
+                  {Object.entries(STATUTS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                 <div className="db-form-group">
                   <label className="db-form-label">Date de départ</label>
-                  <input className="db-form-input" type="date" value={form.date_depart} onChange={(e) => setForm({ ...form, date_depart: e.target.value })} />
+                  <input className="db-form-input" type="date" value={form.dateDepart} onChange={(e) => setForm({ ...form, dateDepart: e.target.value })} />
                 </div>
                 <div className="db-form-group">
                   <label className="db-form-label">Date d'arrivée prévue</label>
-                  <input className="db-form-input" type="date" value={form.date_arrivee} onChange={(e) => setForm({ ...form, date_arrivee: e.target.value })} />
+                  <input className="db-form-input" type="date" value={form.dateArrivee} onChange={(e) => setForm({ ...form, dateArrivee: e.target.value })} />
                 </div>
               </div>
             </div>
             <div className="db-modal-footer">
               <button className="db-btn secondary" onClick={() => setModal(false)}>Annuler</button>
-              <button className="db-btn primary" onClick={handleAjouter}>Créer</button>
+              <button className="db-btn primary" disabled={!form.numero || creer.isPending} onClick={handleAjouter}>
+                {creer.isPending ? 'Création…' : 'Créer'}
+              </button>
             </div>
           </div>
         </div>

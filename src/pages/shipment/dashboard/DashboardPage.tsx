@@ -5,6 +5,7 @@ import Icon from '@/shared/components/dashboard/Icon';
 import '@/assets/css/Dashboard.css';
 import LOGO from '@/assets/images/logo.png';
 
+import { PanelErrorBoundary } from '@/shared/components/dashboard/PanelErrorBoundary';
 import OverviewPanel from './panels/OverviewPanel';
 import ColisPanel from './panels/ColisPanel';
 import ConteneursPanel from './panels/ConteneursPanel';
@@ -91,9 +92,9 @@ export const ShipmentDashboard = () => {
 
         <div className="db-sb-foot">
           <div className="db-admin-pill">
-            <div className="db-admin-ava">{user ? `${user.nom[0]}${user.prenom[0]}`.toUpperCase() : 'A'}</div>
+            <div className="db-admin-ava">{user ? `${(user.prenom ?? '')[0]}${(user.nom ?? '')[0]}`.toUpperCase() : 'A'}</div>
             <div className="db-admin-info">
-              <div className="db-admin-name">{user ? `${user.nom} ${user.prenom}` : 'Administrateur'}</div>
+              <div className="db-admin-name">{user ? `${user.prenom} ${user.nom}` : 'Administrateur'}</div>
               <div className="db-admin-role">{user?.role || 'Admin'}</div>
             </div>
             <button className="db-logout-btn" onClick={handleLogout} title="Déconnexion">
@@ -119,11 +120,11 @@ export const ShipmentDashboard = () => {
 
         <div className="db-content">
           <div className="db-panel active">
-            {page === 'overview' && <OverviewPanel />}
-            {page === 'demandes' && <ColisPanel />}
-            {page === 'conteneurs' && <ConteneursPanel />}
-            {page === 'clients' && <ClientsPanel />}
-            {page === 'admins' && <AdminsPanel />}
+            <PanelErrorBoundary panel="overview">   {page === 'overview'   && <OverviewPanel />}   </PanelErrorBoundary>
+            <PanelErrorBoundary panel="colis">      {page === 'demandes'   && <ColisPanel />}      </PanelErrorBoundary>
+            <PanelErrorBoundary panel="conteneurs"> {page === 'conteneurs' && <ConteneursPanel />} </PanelErrorBoundary>
+            <PanelErrorBoundary panel="clients">    {page === 'clients'    && <ClientsPanel />}    </PanelErrorBoundary>
+            <PanelErrorBoundary panel="admins">     {page === 'admins'     && <AdminsPanel />}     </PanelErrorBoundary>
           </div>
         </div>
       </div>

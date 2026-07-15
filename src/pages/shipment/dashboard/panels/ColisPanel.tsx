@@ -1,96 +1,123 @@
 import { useState } from 'react';
+import { useColis, useUpdateStatutColis, useRefuserColis } from '@/domains/shipment/hooks/useColis';
+import Pagination from '@/shared/components/dashboard/Pagination';
 import Icon from '@/shared/components/dashboard/Icon';
+
+const PAGE_SIZE = 10;
 
 interface Personne { nom: string; prenom: string; telephone: string; adresse?: string }
 interface Colis {
-  id: string;
-  expediteur: Personne;
-  destinataire: Personne;
-  categorie: string;
-  direction: string;
-  mode_depot: string;
-  statut: string;
-  date: string;
+  _id?: string;
+  id?: string;
+  numeroColis?: string;
+  trackingNumber?: string;
+  expediteur?: Personne;
+  destinataire?: Personne;
+  categorie?: string | { nom?: string; _id?: string };
+  direction?: string;
+  modeDepot?: string;
+  mode_depot?: string;
+  statut?: string;
+  createdAt?: string;
+  date?: string;
 }
 
-const FAKE_COLIS: Colis[] = [
-  { id: 'YB-MDFS10042026C14KX', expediteur: { nom: 'Diallo', prenom: 'Amadou', telephone: '+33 6 12 34 56 78' }, destinataire: { nom: 'Diallo', prenom: 'Fatou', telephone: '+221 77 123 45 67', adresse: 'Dakar, Plateau' }, categorie: '1', direction: 'france_senegal', mode_depot: 'depot', statut: 'en_attente', date: '2026-04-01' },
-  { id: 'YB-SFFS11042026C24KY', expediteur: { nom: 'Sow', prenom: 'Ibrahima', telephone: '+33 7 23 45 67 89' }, destinataire: { nom: 'Sow', prenom: 'Mariama', telephone: '+221 78 234 56 78', adresse: 'Thiès, Centre' }, categorie: '2', direction: 'france_senegal', mode_depot: 'collecte', statut: 'valide', date: '2026-04-02' },
-  { id: 'YB-NDSF12042026C34KZ', expediteur: { nom: 'Ndiaye', prenom: 'Moussa', telephone: '+221 76 345 67 89' }, destinataire: { nom: 'Ndiaye', prenom: 'Cheikh', telephone: '+33 6 34 56 78 90', adresse: 'Paris, 75001' }, categorie: '3', direction: 'senegal_france', mode_depot: 'collecte', statut: 'en_transit', date: '2026-04-03' },
-  { id: 'YB-BAFS13042026C14KA', expediteur: { nom: 'Ba', prenom: 'Aissatou', telephone: '+33 6 45 67 89 01' }, destinataire: { nom: 'Ba', prenom: 'Oumar', telephone: '+221 70 456 78 90', adresse: 'Saint-Louis' }, categorie: '1', direction: 'france_senegal', mode_depot: 'depot', statut: 'livre', date: '2026-04-04' },
-];
+const colisId = (c: Colis) => c._id ?? c.id ?? '';
+const colisNum = (c: Colis) => c.numeroColis ?? c.trackingNumber ?? colisId(c).slice(0, 14).toUpperCase();
+const nomCategorie = (cat: Colis['categorie']) => {
+  if (!cat) return '—';
+  if (typeof cat === 'string') return cat;
+  return (cat as any).nom ?? '—';
+};
+const STATUT_TERMINAUX = ['livre', 'annule', 'refuse'];
 
 const STATUTS: Record<string, { label: string; background: string; color: string }> = {
   en_attente: { label: 'En attente', background: '#fef3c7', color: '#92400e' },
-  valide: { label: 'Validé', background: '#dbeafe', color: '#1e40af' },
-  paye: { label: 'Payé', background: '#e0e7ff', color: '#3730a3' },
-  collecte: { label: 'Collecté', background: '#ede9fe', color: '#5b21b6' },
+  valide:     { label: 'Validé',     background: '#dbeafe', color: '#1e40af' },
+  paye:       { label: 'Payé',       background: '#e0e7ff', color: '#3730a3' },
+  collecte:   { label: 'Collecté',   background: '#ede9fe', color: '#5b21b6' },
   en_transit: { label: 'En transit', background: '#e0f2fe', color: '#075985' },
   arrive_dakar: { label: 'Arrivé Dakar', background: '#dcfce7', color: '#166534' },
-  livre: { label: 'Livré', background: '#d1fae5', color: '#065f46' },
-  annule: { label: 'Annulé', background: '#f3f4f6', color: '#6b7280' },
-  refuse: { label: 'Refusé', background: '#fee2e2', color: '#991b1b' },
+  livre:      { label: 'Livré',      background: '#d1fae5', color: '#065f46' },
+  annule:     { label: 'Annulé',     background: '#f3f4f6', color: '#6b7280' },
+  refuse:     { label: 'Refusé',     background: '#fee2e2', color: '#991b1b' },
 };
 
-const CATEGORIES: Record<string, string> = { '1': 'Document', '2': 'Colis moyen', '3': 'Gros colis' };
-const DIRECTIONS: Record<string, string> = { france_senegal: 'France → Sénégal', senegal_france: 'Sénégal → France' };
+const DIRECTIONS: Record<string, string> = {
+  france_senegal: 'France → Sénégal',
+  senegal_france: 'Sénégal → France',
+};
 
 export default function ColisPanel() {
-  const [colis, setColis] = useState<Colis[]>(FAKE_COLIS);
-  const [search, setSearch] = useState('');
-  const [filtreStatut, setFiltreStatut] = useState('tous');
-  const [filtreDirection, setFiltreDirection] = useState('tous');
-  const [filtreCategorie, setFiltreCategorie] = useState('tous');
-  const [selected, setSelected] = useState<Colis | null>(null);
+  const [page, setPage]               = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch]           = useState('');
+  const [filtreStatut, setFiltreStatut]       = useState('');
+  const [filtreDirection, setFiltreDirection] = useState('');
+  const [selected, setSelected]   = useState<Colis | null>(null);
   const [modalRefus, setModalRefus] = useState<Colis | null>(null);
   const [raisonRefus, setRaisonRefus] = useState('');
+  const [modalStatut, setModalStatut] = useState<Colis | null>(null);
+  const [newStatut, setNewStatut]     = useState('');
 
-  const filtered = colis.filter((c) => {
-    const q = search.toLowerCase();
-    const matchSearch = c.id.toLowerCase().includes(q) || c.expediteur.nom.toLowerCase().includes(q) || c.destinataire.nom.toLowerCase().includes(q);
-    const matchStatut = filtreStatut === 'tous' || c.statut === filtreStatut;
-    const matchDirection = filtreDirection === 'tous' || c.direction === filtreDirection;
-    const matchCategorie = filtreCategorie === 'tous' || c.categorie === filtreCategorie;
-    return matchSearch && matchStatut && matchDirection && matchCategorie;
+  const { data, isLoading, isError } = useColis({
+    page, limit: PAGE_SIZE,
+    ...(filtreStatut    ? { statut: filtreStatut }       : {}),
+    ...(filtreDirection ? { direction: filtreDirection } : {}),
+    ...(search          ? { search }                     : {}),
   });
 
-  const changerStatut = (id: string, newStatut: string) => {
-    setColis((prev) => prev.map((c) => (c.id === id ? { ...c, statut: newStatut } : c)));
-    setSelected((s) => (s && s.id === id ? { ...s, statut: newStatut } : s));
+  const updateStatut = useUpdateStatutColis();
+  const refuser      = useRefuserColis();
+
+  const colis: Colis[] = (data as any)?.colis ?? (data as any)?.data ?? [];
+  const total: number  = (data as any)?.pagination?.total ?? (data as any)?.total ?? colis.length;
+
+  const handleSearch = () => { setSearch(searchInput); setPage(1); };
+
+  const handleUpdateStatut = () => {
+    if (!modalStatut || !newStatut) return;
+    updateStatut.mutate(
+      { id: colisId(modalStatut), statut: newStatut },
+      { onSuccess: () => { setModalStatut(null); setNewStatut(''); setSelected(null); } }
+    );
   };
 
   const handleRefuser = () => {
     if (!raisonRefus.trim() || !modalRefus) return;
-    changerStatut(modalRefus.id, 'refuse');
-    setModalRefus(null);
-    setRaisonRefus('');
+    refuser.mutate(
+      { id: colisId(modalRefus), raison: raisonRefus },
+      { onSuccess: () => { setModalRefus(null); setRaisonRefus(''); } }
+    );
   };
+
+  const st = (statut?: string) => STATUTS[statut ?? ''] ?? { label: statut ?? '—', background: '#f3f4f6', color: '#374151' };
 
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.7rem', marginBottom: '0.8rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="db-form-input" placeholder="Rechercher numéro, expéditeur, destinataire..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 320, padding: '0.5rem 0.9rem' }} />
+        <input
+          className="db-form-input"
+          placeholder="Rechercher numéro, expéditeur, destinataire..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          style={{ width: 320, padding: '0.5rem 0.9rem' }}
+        />
+        <button className="db-btn primary" onClick={handleSearch} style={{ padding: '0.5rem 1rem' }}>Rechercher</button>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.8rem', color: '#888', alignSelf: 'center' }}>Direction :</span>
-        {['tous', 'france_senegal', 'senegal_france'].map((d) => (
-          <button key={d} className={`db-chip${filtreDirection === d ? ' active' : ''}`} onClick={() => setFiltreDirection(d)}>
-            {d === 'tous' ? 'Toutes' : DIRECTIONS[d]}
-          </button>
-        ))}
-        <span style={{ fontSize: '0.8rem', color: '#888', alignSelf: 'center', marginLeft: 8 }}>Catégorie :</span>
-        {['tous', '1', '2', '3'].map((c) => (
-          <button key={c} className={`db-chip${filtreCategorie === c ? ' active' : ''}`} onClick={() => setFiltreCategorie(c)}>
-            {c === 'tous' ? 'Toutes' : CATEGORIES[c]}
+        {([['', 'Toutes'], ['france_senegal', 'France → Sénégal'], ['senegal_france', 'Sénégal → France']] as [string, string][]).map(([val, lbl]) => (
+          <button key={val} className={`db-chip${filtreDirection === val ? ' active' : ''}`} onClick={() => { setFiltreDirection(val); setPage(1); }}>
+            {lbl}
           </button>
         ))}
         <span style={{ fontSize: '0.8rem', color: '#888', alignSelf: 'center', marginLeft: 8 }}>Statut :</span>
-        <select className="db-form-input db-form-select" value={filtreStatut} onChange={(e) => setFiltreStatut(e.target.value)} style={{ width: 160, padding: '0.4rem 0.7rem', fontSize: '0.85rem' }}>
-          <option value="tous">Tous</option>
-          {Object.entries(STATUTS).map(([key, val]) => (
-            <option key={key} value={key}>{val.label}</option>
-          ))}
+        <select className="db-form-input db-form-select" value={filtreStatut} onChange={(e) => { setFiltreStatut(e.target.value); setPage(1); }} style={{ width: 160, padding: '0.4rem 0.7rem', fontSize: '0.85rem' }}>
+          <option value="">Tous</option>
+          {Object.entries(STATUTS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
         </select>
       </div>
 
@@ -102,7 +129,7 @@ export default function ColisPanel() {
                 <th>N° Suivi</th>
                 <th>Expéditeur</th>
                 <th>Destinataire</th>
-                <th>Cat.</th>
+                <th>Catégorie</th>
                 <th>Direction</th>
                 <th>Statut</th>
                 <th>Date</th>
@@ -110,88 +137,118 @@ export default function ColisPanel() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Chargement…</td></tr>
+              ) : isError ? (
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#991b1b' }}>Erreur de chargement</td></tr>
+              ) : colis.length === 0 ? (
                 <tr><td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>Aucun colis trouvé</td></tr>
-              ) : (
-                filtered.map((c) => (
-                  <tr key={c.id}>
-                    <td className="db-td-bold" style={{ fontSize: '0.78rem' }}>{c.id}</td>
-                    <td>{c.expediteur.prenom} {c.expediteur.nom}</td>
-                    <td>{c.destinataire.prenom} {c.destinataire.nom}</td>
-                    <td><span style={{ background: '#f0f4ff', color: '#1a56db', padding: '2px 8px', borderRadius: 20, fontSize: '0.73rem', fontWeight: 600 }}>Cat. {c.categorie}</span></td>
-                    <td style={{ fontSize: '0.82rem' }}>{DIRECTIONS[c.direction]}</td>
-                    <td>
-                      <select value={c.statut} onChange={(e) => changerStatut(c.id, e.target.value)} style={{ background: STATUTS[c.statut]?.background, color: STATUTS[c.statut]?.color, border: 'none', borderRadius: 20, padding: '3px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
-                        {Object.entries(STATUTS).map(([key, val]) => (
-                          <option key={key} value={key}>{val.label}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={{ fontSize: '0.82rem' }}>{c.date}</td>
+              ) : colis.map((c) => {
+                const s = st(c.statut);
+                const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('fr-FR') : (c.date ?? '—');
+                return (
+                  <tr key={colisId(c)}>
+                    <td className="db-td-bold" style={{ fontSize: '0.78rem' }}>{colisNum(c)}</td>
+                    <td>{c.expediteur ? `${c.expediteur.prenom} ${c.expediteur.nom}` : '—'}</td>
+                    <td>{c.destinataire ? `${c.destinataire.prenom} ${c.destinataire.nom}` : '—'}</td>
+                    <td><span style={{ background: '#f0f4ff', color: '#1a56db', padding: '2px 8px', borderRadius: 20, fontSize: '0.73rem', fontWeight: 600 }}>{nomCategorie(c.categorie)}</span></td>
+                    <td style={{ fontSize: '0.82rem' }}>{c.direction ? (DIRECTIONS[c.direction] ?? c.direction) : '—'}</td>
+                    <td><span style={{ background: s.background, color: s.color, padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600 }}>{s.label}</span></td>
+                    <td style={{ fontSize: '0.82rem' }}>{dateStr}</td>
                     <td>
                       <div className="db-actions">
                         <button className="db-btn-ghost" onClick={() => setSelected(c)}>Voir</button>
-                        {(c.categorie === '2' || c.categorie === '3') && c.statut === 'en_attente' && (
-                          <>
-                            <button className="db-btn-ghost" style={{ color: '#065f46', borderColor: '#065f46' }} onClick={() => changerStatut(c.id, 'valide')}>Valider</button>
-                            <button className="db-btn-danger" onClick={() => setModalRefus(c)}>Refuser</button>
-                          </>
+                        {!STATUT_TERMINAUX.includes(c.statut ?? '') && (
+                          <button className="db-btn-ghost" style={{ color: '#065f46', borderColor: '#065f46' }} onClick={() => { setModalStatut(c); setNewStatut(c.statut ?? ''); }}>Statut</button>
+                        )}
+                        {c.statut === 'en_attente' && (
+                          <button className="db-btn-danger" onClick={() => { setModalRefus(c); setRaisonRefus(''); }}>Refuser</button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={PAGE_SIZE} onChange={setPage} />
       </div>
 
+      {/* Modal détail */}
       {selected && (
         <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
             <div className="db-modal-head">
-              <div className="db-modal-title">Colis {selected.id}</div>
+              <div className="db-modal-title">Colis {colisNum(selected)}</div>
               <button className="db-modal-close" onClick={() => setSelected(null)}><Icon name="x" size={14} /></button>
             </div>
             <div style={{ padding: '0 1.65rem 1.65rem', maxHeight: '70vh', overflowY: 'auto' }}>
               <div style={{ marginBottom: '1rem' }}>
-                <span style={{ background: STATUTS[selected.statut]?.background, color: STATUTS[selected.statut]?.color, padding: '4px 14px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600 }}>{STATUTS[selected.statut]?.label}</span>
+                {(() => { const s = st(selected.statut); return <span style={{ background: s.background, color: s.color, padding: '4px 14px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600 }}>{s.label}</span>; })()}
               </div>
               <SectionLabel label="Informations générales" />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem', marginBottom: '1rem' }}>
-                <InfoBox label="Catégorie" value={CATEGORIES[selected.categorie]} />
-                <InfoBox label="Direction" value={DIRECTIONS[selected.direction]} />
-                <InfoBox label="Mode dépôt" value={selected.mode_depot === 'depot' ? 'Dépôt en agence' : 'Collecte à domicile'} />
-                <InfoBox label="Date" value={selected.date} />
+                <InfoBox label="Catégorie" value={nomCategorie(selected.categorie)} />
+                <InfoBox label="Direction" value={selected.direction ? (DIRECTIONS[selected.direction] ?? selected.direction) : '—'} />
+                <InfoBox label="Mode dépôt" value={(() => { const m = selected.modeDepot ?? selected.mode_depot; return m === 'depot' ? 'Dépôt en agence' : m === 'collecte' ? 'Collecte à domicile' : m ?? '—'; })()} />
+                <InfoBox label="Date" value={selected.createdAt ? new Date(selected.createdAt).toLocaleDateString('fr-FR') : (selected.date ?? '—')} />
               </div>
-              <SectionLabel label="Expéditeur" />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem', marginBottom: '1rem' }}>
-                <InfoBox label="Nom" value={`${selected.expediteur.prenom} ${selected.expediteur.nom}`} />
-                <InfoBox label="Téléphone" value={selected.expediteur.telephone} />
-              </div>
-              <SectionLabel label="Destinataire" />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem', marginBottom: '1rem' }}>
-                <InfoBox label="Nom" value={`${selected.destinataire.prenom} ${selected.destinataire.nom}`} />
-                <InfoBox label="Téléphone" value={selected.destinataire.telephone} />
-                <InfoBox label="Adresse" value={selected.destinataire.adresse || '—'} />
-              </div>
-              <div style={{ marginTop: '1rem' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#9ca3af', marginBottom: 6 }}>Changer le statut</div>
-                <select className="db-form-input db-form-select" value={selected.statut} onChange={(e) => changerStatut(selected.id, e.target.value)}>
-                  {Object.entries(STATUTS).map(([key, val]) => (
-                    <option key={key} value={key}>{val.label}</option>
-                  ))}
-                </select>
-              </div>
+              {selected.expediteur && (
+                <>
+                  <SectionLabel label="Expéditeur" />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem', marginBottom: '1rem' }}>
+                    <InfoBox label="Nom" value={`${selected.expediteur.prenom} ${selected.expediteur.nom}`} />
+                    <InfoBox label="Téléphone" value={selected.expediteur.telephone} />
+                  </div>
+                </>
+              )}
+              {selected.destinataire && (
+                <>
+                  <SectionLabel label="Destinataire" />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem', marginBottom: '1rem' }}>
+                    <InfoBox label="Nom" value={`${selected.destinataire.prenom} ${selected.destinataire.nom}`} />
+                    <InfoBox label="Téléphone" value={selected.destinataire.telephone} />
+                    <InfoBox label="Adresse" value={selected.destinataire.adresse ?? '—'} />
+                  </div>
+                </>
+              )}
             </div>
             <div className="db-modal-footer">
               <button className="db-btn secondary" onClick={() => setSelected(null)}>Fermer</button>
+              {!STATUT_TERMINAUX.includes(selected.statut ?? '') && (
+                <button className="db-btn primary" onClick={() => { setModalStatut(selected); setNewStatut(selected.statut ?? ''); setSelected(null); }}>Changer le statut</button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal statut */}
+      {modalStatut && (
+        <div onClick={() => setModalStatut(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 400, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+            <div className="db-modal-head">
+              <div className="db-modal-title">Changer le statut</div>
+              <button className="db-modal-close" onClick={() => setModalStatut(null)}><Icon name="x" size={14} /></button>
+            </div>
+            <div style={{ padding: '0 1.65rem' }}>
+              <div className="db-form-group">
+                <label className="db-form-label">Nouveau statut</label>
+                <select className="db-form-input db-form-select" value={newStatut} onChange={(e) => setNewStatut(e.target.value)}>
+                  {Object.entries(STATUTS).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="db-modal-footer">
+              <button className="db-btn secondary" onClick={() => setModalStatut(null)}>Annuler</button>
+              <button className="db-btn primary" disabled={updateStatut.isPending} onClick={handleUpdateStatut}>{updateStatut.isPending ? 'Mise à jour…' : 'Confirmer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal refus */}
       {modalRefus && (
         <div onClick={() => { setModalRefus(null); setRaisonRefus(''); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
@@ -199,18 +256,16 @@ export default function ColisPanel() {
               <div className="db-modal-title">Refuser le colis</div>
               <button className="db-modal-close" onClick={() => { setModalRefus(null); setRaisonRefus(''); }}><Icon name="x" size={14} /></button>
             </div>
-            <div style={{ padding: '0 1.65rem 1.65rem' }}>
-              <p style={{ color: '#444', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                Veuillez indiquer la raison du refus pour le colis <strong>{modalRefus.id}</strong>.
-              </p>
+            <div style={{ padding: '0 1.65rem' }}>
+              <p style={{ color: '#444', marginBottom: '1rem', fontSize: '0.9rem' }}>Raison du refus pour le colis <strong>{colisNum(modalRefus)}</strong>.</p>
               <div className="db-form-group">
-                <label className="db-form-label">Raison du refus</label>
+                <label className="db-form-label">Raison</label>
                 <textarea className="db-form-input" rows={4} value={raisonRefus} onChange={(e) => setRaisonRefus(e.target.value)} placeholder="Ex: Contenu non conforme..." style={{ resize: 'vertical' }} />
               </div>
             </div>
             <div className="db-modal-footer">
               <button className="db-btn secondary" onClick={() => { setModalRefus(null); setRaisonRefus(''); }}>Annuler</button>
-              <button className="db-btn confirm" onClick={handleRefuser}>Confirmer le refus</button>
+              <button className="db-btn confirm" disabled={refuser.isPending || !raisonRefus.trim()} onClick={handleRefuser}>{refuser.isPending ? 'Refus…' : 'Confirmer le refus'}</button>
             </div>
           </div>
         </div>

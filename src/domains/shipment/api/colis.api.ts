@@ -1,23 +1,21 @@
-﻿// domains/shipment/api/colis.api.ts — Appels API Yobante Colis / Colis
-// import shipmentClient from '@/infrastructure/http/shipment.client'
+import shipmentClient from '@/infrastructure/http/shipment.client';
 
-// TODO: getColis(filters): Promise<PaginatedResponse<Colis>>
-//   -> shipmentClient.get('/admin/colis', { params: filters })
+export interface ColisParams {
+  page?: number;
+  limit?: number;
+  statut?: string;
+  direction?: string;
+  search?: string;
+}
 
-// TODO: getColisById(id): Promise<Colis>
-//   -> shipmentClient.get(/admin/colis/)
+export const getColis = (params?: ColisParams): Promise<any> =>
+  shipmentClient.get('/admin/colis', { params });
 
-// TODO: createColis(data: FormData): Promise<Colis>
-//   -> shipmentClient.post('/admin/colis', data, { headers: multipart })
+export const getColisById = (id: string): Promise<any> =>
+  shipmentClient.get(`/admin/colis/${id}`);
 
-// TODO: updateColis(id, data): Promise<Colis>
-//   -> shipmentClient.put(/admin/colis/, data)
+export const updateStatutColis = (id: string, payload: { statut: string; localisation?: string; description?: string }): Promise<any> =>
+  shipmentClient.patch(`/admin/colis/${id}/statut`, payload);
 
-// TODO: updateStatutColis(id, payload: { statut, localisation, description }): Promise<Colis>
-//   -> shipmentClient.patch(/admin/colis//statut, payload)
-
-// TODO: ajouterPhotos(id, files: FileList): Promise<Colis>
-//   -> shipmentClient.post(/admin/colis//photos, formData)
-
-// TODO: exportColis(filters, format): Promise<Blob>
-//   -> shipmentClient.get('/admin/colis/export', { params, responseType: 'blob' })
+export const refuserColis = (id: string, raison: string): Promise<any> =>
+  shipmentClient.patch(`/admin/colis/${id}/refuser`, { raison });
