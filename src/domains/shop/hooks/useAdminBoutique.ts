@@ -183,8 +183,11 @@ export const useToggleAdmin = () => {
 };
 
 // ─── Vendeurs ─────────────────────────────────────────────────
-export const useVendeurs = () =>
-  useQuery({ queryKey: boutiqueKeys.vendeurs, queryFn: () => api.listerVendeurs() });
+export const useVendeurs = (params?: Record<string, any>) =>
+  useQuery({
+    queryKey: params ? [...boutiqueKeys.vendeurs, params] : boutiqueKeys.vendeurs,
+    queryFn: () => api.listerVendeurs(params),
+  });
 
 export const useValiderVendeur = () => {
   const invalidate = useInvalidate([boutiqueKeys.vendeurs]);

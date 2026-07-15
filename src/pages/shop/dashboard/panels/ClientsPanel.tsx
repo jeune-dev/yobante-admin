@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useClients, useToggleClient } from '@/domains/shop/hooks/useAdminBoutique';
 import Icon from '@/shared/components/dashboard/Icon';
+import Pagination from '@/shared/components/dashboard/Pagination';
 import { StateRow } from './_state';
 
+const PAGE_SIZE = 10;
+
 const STATUT_COLORS: Record<string, { background: string; color: string }> = {
-  actif: { background: '#d1fae5', color: '#065f46' },
+  actif:   { background: '#d1fae5', color: '#065f46' },
   inactif: { background: '#fee2e2', color: '#991b1b' },
 };
 
@@ -15,35 +18,32 @@ interface Client {
   email: string;
   telephone?: string | null;
   isActive?: boolean;
-  adresse?: string;
 }
 
 export default function ClientsPanel() {
-  const { data, isLoading, isError } = useClients();
+  const [page, setPage]           = useState(1);
+  const [search, setSearch]       = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [filtreStatut, setFiltreStatut] = useState<'' | 'actif' | 'inactif'>('');
+  const [selected, setSelected]   = useState<Client | null>(null);
+
+  const { data, isLoading, isError } = useClients({
+    page,
+    limit: PAGE_SIZE,
+    ...(search ? { search } : {}),
+    ...(filtreStatut ? { statut: filtreStatut } : {}),
+  });
+
   const toggle = useToggleClient();
-  const [search, setSearch] = useState('');
-  const [filtreStatut, setFiltreStatut] = useState<'tous' | 'actif' | 'inactif'>('tous');
-  const [selected, setSelected] = useState<Client | null>(null);
 
-  const clients: Client[] = data?.clients ?? [];
+  const clients: Client[] = (data as any)?.clients ?? [];
+  const total: number     = (data as any)?.pagination?.total ?? clients.length;
 
-  const filtered = useMemo(
-    () =>
-      clients.filter((c) => {
-        const q = search.toLowerCase();
-        const matchSearch =
-          c.nom?.toLowerCase().includes(q) ||
-          c.prenom?.toLowerCase().includes(q) ||
-          c.email?.toLowerCase().includes(q) ||
-          (c.telephone || '').includes(search);
-        const statut = c.isActive ? 'actif' : 'inactif';
-        const matchStatut = filtreStatut === 'tous' || statut === filtreStatut;
-        return matchSearch && matchStatut;
-      }),
-    [clients, search, filtreStatut]
-  );
+  const handleSearch = () => { setPage(1); setSearch(searchInput); };
+  const handleKey    = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSearch(); };
+  const changeStatut = (s: '' | 'actif' | 'inactif') => { setFiltreStatut(s); setPage(1); };
 
-  const initiales = (c: Client) => `${c.prenom?.[0] ?? ''}${c.nom?.[0] ?? ''}`.toUpperCase();
+  const initiales  = (c: Client) => `${c.prenom?.[0] ?? ''}${c.nom?.[0] ?? ''}`.toUpperCase();
   const statutLabel = (c: Client) => (c.isActive ? 'actif' : 'inactif');
 
   return (
@@ -52,18 +52,19 @@ export default function ClientsPanel() {
         <input
           className="db-form-input"
           placeholder="Rechercher nom, email, téléphone..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={handleKey}
           style={{ width: 280, padding: '0.5rem 0.9rem' }}
         />
-        {(['tous', 'actif', 'inactif'] as const).map((s) => (
-          <button key={s} className={`db-chip${filtreStatut === s ? ' active' : ''}`} onClick={() => setFiltreStatut(s)}>
-            {s === 'tous' ? 'Tous' : s === 'actif' ? 'Actifs' : 'Inactifs'}
+        <button className="db-btn primary" style={{ padding: '0.5rem 1rem' }} onClick={handleSearch}>
+          Rechercher
+        </button>
+        {(['', 'actif', 'inactif'] as const).map((s) => (
+          <button key={s} className={`db-chip${filtreStatut === s ? ' active' : ''}`} onClick={() => changeStatut(s)}>
+            {s === '' ? 'Tous' : s === 'actif' ? 'Actifs' : 'Inactifs'}
           </button>
         ))}
-        <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#888' }}>
-          {filtered.length} client{filtered.length > 1 ? 's' : ''}
-        </div>
       </div>
 
       <div className="db-card">
@@ -79,9 +80,9 @@ export default function ClientsPanel() {
               </tr>
             </thead>
             <tbody>
-              <StateRow colSpan={5} loading={isLoading} error={isError} empty={filtered.length === 0} emptyLabel="Aucun client trouvé" />
+              <StateRow colSpan={5} loading={isLoading} error={isError} empty={clients.length === 0} emptyLabel="Aucun client trouvé" />
               {!isLoading && !isError &&
-                filtered.map((c) => (
+                clients.map((c) => (
                   <tr key={c.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -116,6 +117,7 @@ export default function ClientsPanel() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={PAGE_SIZE} onChange={setPage} />
       </div>
 
       {selected && (
@@ -132,7 +134,7 @@ export default function ClientsPanel() {
             </div>
             <div style={{ padding: '1.4rem 1.65rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                <InfoRow icon="mail" label="Email" value={selected.email} />
+                <InfoRow icon="mail"  label="Email"     value={selected.email} />
                 <InfoRow icon="phone" label="Téléphone" value={selected.telephone || '—'} />
               </div>
             </div>

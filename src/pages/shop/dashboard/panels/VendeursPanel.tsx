@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useVendeurs, useValiderVendeur, useToggleVendeur, useCreerVendeur } from '@/domains/shop/hooks/useAdminBoutique';
+import Pagination from '@/shared/components/dashboard/Pagination';
 import { StateRow } from './_state';
+
+const PAGE_SIZE = 10;
 
 interface Vendeur {
   id: string;
@@ -13,8 +16,7 @@ interface Vendeur {
   profilVendeur?: { nomBoutique?: string; isValidatedStep1?: boolean; isValidatedStep2?: boolean };
 }
 
-const nomBoutique = (v: Vendeur) =>
-  v.profilVendeur?.nomBoutique || '—';
+const nomBoutique = (v: Vendeur) => v.profilVendeur?.nomBoutique || '—';
 
 const statutValidation = (v: Vendeur) => {
   const p = v.profilVendeur;
@@ -27,16 +29,18 @@ const statutValidation = (v: Vendeur) => {
 const EMPTY = { prenom: '', nom: '', email: '', password: '', telephone: '', nomBoutique: '', description: '' };
 
 export default function VendeursPanel() {
-  const { data, isLoading, isError } = useVendeurs();
-  const valider  = useValiderVendeur();
-  const toggle   = useToggleVendeur();
-  const creer    = useCreerVendeur();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError } = useVendeurs({ page, limit: PAGE_SIZE });
+  const valider = useValiderVendeur();
+  const toggle  = useToggleVendeur();
+  const creer   = useCreerVendeur();
 
-  const [open, setOpen]   = useState(false);
-  const [form, setForm]   = useState(EMPTY);
+  const [open, setOpen]     = useState(false);
+  const [form, setForm]     = useState(EMPTY);
   const [errors, setErrors] = useState<Partial<typeof EMPTY>>({});
 
-  const vendeurs: Vendeur[] = data?.vendeurs ?? [];
+  const vendeurs: Vendeur[] = (data as any)?.vendeurs ?? [];
+  const total: number       = (data as any)?.pagination?.total ?? vendeurs.length;
 
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -65,7 +69,7 @@ export default function VendeursPanel() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '0.9rem', color: '#555' }}>{vendeurs.length} vendeur(s)</div>
+        <div style={{ fontSize: '0.9rem', color: '#555' }}>{total} vendeur(s)</div>
         <button
           className="db-btn-primary"
           onClick={() => setOpen(true)}
@@ -115,9 +119,10 @@ export default function VendeursPanel() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={PAGE_SIZE} onChange={setPage} />
       </div>
 
-      {/* Modal */}
+      {/* Modal création */}
       {open && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={close}>
           <div style={{ background: '#fff', borderRadius: 14, padding: '2rem', width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -127,7 +132,6 @@ export default function VendeursPanel() {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Prénom / Nom */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <Field label="Prénom *" error={errors.prenom}>
                   <input value={form.prenom} onChange={set('prenom')} placeholder="Ex: Alassane" style={inputStyle(!!errors.prenom)} />
@@ -136,23 +140,18 @@ export default function VendeursPanel() {
                   <input value={form.nom} onChange={set('nom')} placeholder="Ex: Gueye" style={inputStyle(!!errors.nom)} />
                 </Field>
               </div>
-
               <Field label="Email *" error={errors.email}>
                 <input type="email" value={form.email} onChange={set('email')} placeholder="vendeur@example.com" style={inputStyle(!!errors.email)} />
               </Field>
-
               <Field label="Mot de passe *" error={errors.password}>
                 <input type="password" value={form.password} onChange={set('password')} placeholder="Min. 6 caractères" style={inputStyle(!!errors.password)} />
               </Field>
-
               <Field label="Téléphone" error={errors.telephone}>
                 <input value={form.telephone} onChange={set('telephone')} placeholder="Ex: +221 77 000 00 00" style={inputStyle(false)} />
               </Field>
-
               <Field label="Nom de la boutique *" error={errors.nomBoutique}>
                 <input value={form.nomBoutique} onChange={set('nomBoutique')} placeholder="Ex: Boutique Alassane" style={inputStyle(!!errors.nomBoutique)} />
               </Field>
-
               <Field label="Description" error={errors.description}>
                 <textarea value={form.description} onChange={set('description')} placeholder="Description de la boutique (optionnel)" rows={3} style={{ ...inputStyle(false), resize: 'vertical' }} />
               </Field>

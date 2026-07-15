@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import {
@@ -11,7 +11,10 @@ import {
 } from '@/domains/shop/hooks/useAdminBoutique';
 import * as api from '@/domains/shop/api/admin.api';
 import Icon from '@/shared/components/dashboard/Icon';
+import Pagination from '@/shared/components/dashboard/Pagination';
 import { StateRow, fcfa } from './_state';
+
+const PAGE_SIZE = 10;
 
 interface Categorie { id: string; nom?: string }
 interface Produit {
@@ -35,13 +38,24 @@ const nomCategorie = (c: Produit['categorie']) =>
 const imgOf = (p?: Produit): string | null => (p?.image || p?.images?.[0]) ?? null;
 
 export default function ProduitsPanel() {
-  const { data, isLoading, isError } = useProduits({ limit: 100 });
-  const qc = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [page, setPage]             = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch]         = useState('');
   const [confirmDelete, setConfirmDelete] = useState<Produit | null>(null);
-  const [editor, setEditor] = useState<{ produit: Produit | null } | null>(null);
+  const [editor, setEditor]         = useState<{ produit: Produit | null } | null>(null);
 
-  const produits: Produit[] = data?.produits ?? [];
+  const { data, isLoading, isError } = useProduits({
+    page,
+    limit: PAGE_SIZE,
+    ...(search ? { search } : {}),
+  });
+  const qc = useQueryClient();
+
+  const produits: Produit[] = (data as any)?.produits ?? [];
+  const total: number       = (data as any)?.pagination?.total ?? produits.length;
+
+  const handleSearch = () => { setPage(1); setSearch(searchInput); };
+  const handleKey    = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSearch(); };
 
   const del = useMutation({
     mutationFn: (id: string) => api.supprimerProduit(id),
@@ -59,15 +73,18 @@ export default function ProduitsPanel() {
     onError: (e: any) => toast.error(e?.message || 'Erreur'),
   });
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return produits.filter((p) => (p.nom || p.titre || '').toLowerCase().includes(q));
-  }, [produits, search]);
-
   return (
     <div>
       <div style={{ display: 'flex', gap: '0.7rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="db-form-input" placeholder="Rechercher un produit..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 260, padding: '0.5rem 0.9rem' }} />
+        <input
+          className="db-form-input"
+          placeholder="Rechercher un produit..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={handleKey}
+          style={{ width: 260, padding: '0.5rem 0.9rem' }}
+        />
+        <button className="db-btn primary" style={{ padding: '0.5rem 1rem' }} onClick={handleSearch}>Rechercher</button>
         <button className="db-btn primary" style={{ marginLeft: 'auto' }} onClick={() => setEditor({ produit: null })}>+ Ajouter un produit</button>
       </div>
 
@@ -86,9 +103,9 @@ export default function ProduitsPanel() {
               </tr>
             </thead>
             <tbody>
-              <StateRow colSpan={7} loading={isLoading} error={isError} empty={filtered.length === 0} emptyLabel="Aucun produit trouvé" />
+              <StateRow colSpan={7} loading={isLoading} error={isError} empty={produits.length === 0} emptyLabel="Aucun produit trouvé" />
               {!isLoading && !isError &&
-                filtered.map((p) => (
+                produits.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <div style={{ width: 42, height: 42, borderRadius: 10, background: '#f0f0ee', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
@@ -115,6 +132,7 @@ export default function ProduitsPanel() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} limit={PAGE_SIZE} onChange={setPage} />
       </div>
 
       {editor && <ProductEditor produit={editor.produit} onClose={() => setEditor(null)} />}
