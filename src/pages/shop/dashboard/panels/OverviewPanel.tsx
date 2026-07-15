@@ -34,9 +34,10 @@ export default function OverviewPanel() {
   const isError   = overview.isError && fallback.isError;
   const d         = ((overview.isError ? fallback.data : overview.data) ?? overview.data) as any;
 
-  const totalVendeurs   = d?.totalVendeurs   || (vendeursData   as any)?.pagination?.total || (vendeursData   as any)?.vendeurs?.length   || 0;
-  const totalCategories = d?.totalCategories || (categoriesData as any)?.categories?.length || 0;
-  const totalProduits   = d?.totalProduits   || (produitsData   as any)?.pagination?.total || (produitsData   as any)?.produits?.length   || 0;
+  const totalVendeurs   = (vendeursData   as any)?.pagination?.total ?? (vendeursData   as any)?.vendeurs?.length   ?? d?.totalVendeurs   ?? 0;
+  const totalCategories = (categoriesData as any)?.categories?.length                                                ?? d?.totalCategories ?? 0;
+  // Priorité au total de la liste (inclut produits masqués), stats ne compte que isActive=true
+  const totalProduits   = (produitsData   as any)?.pagination?.total ?? (produitsData   as any)?.produits?.length   ?? d?.totalProduits   ?? 0;
 
   const kpis = [
     { label: 'Total clients',       value: d?.totalClients       ?? 0,  icon: 'users',          color: '#7c3aed' },
