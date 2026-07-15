@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDashboardOverview } from '@/domains/shop/hooks/useAdminBoutique';
+import { useDashboardOverview, useDashboardStats } from '@/domains/shop/hooks/useAdminBoutique';
 import Icon from '@/shared/components/dashboard/Icon';
 import { fcfa } from './_state';
 
@@ -23,9 +23,13 @@ const iconBox = (color: string): React.CSSProperties => ({
 });
 
 export default function OverviewPanel() {
-  const { data, isLoading, isError } = useDashboardOverview();
+  const overview = useDashboardOverview();
+  const fallback = useDashboardStats();
 
-  const d = data as any;
+  // Si /overview n'est pas encore déployé, on se rabat sur /stats
+  const isLoading = overview.isLoading || (overview.isError && fallback.isLoading);
+  const isError   = overview.isError && fallback.isError;
+  const d         = ((overview.isError ? fallback.data : overview.data) ?? overview.data) as any;
 
   const kpis = [
     { label: 'Total clients',       value: d?.totalClients       ?? 0,           icon: 'users',          color: '#7c3aed' },
