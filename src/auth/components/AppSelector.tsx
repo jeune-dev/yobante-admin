@@ -1,7 +1,8 @@
 import { useAuth } from '@/auth/hooks/useAuth';
 import Icon from '@/shared/components/dashboard/Icon';
 import '@/assets/css/Login.css';
-import LOGO from '@/assets/images/logo.png';
+import LOGO_BOUTIQUE from '@/assets/images/Logo Yobante Boutique - fond blanc.png';
+import LOGO_REK from '@/assets/images/Logo Yobante Rek - fond blanc.png';
 
 interface Espace {
   id: 'shop' | 'shipment';
@@ -11,7 +12,7 @@ interface Espace {
   desc: string;
   chips: string[];
   icon: string;
-  useLogo?: boolean;
+  logo?: string;
 }
 
 const ESPACES: Espace[] = [
@@ -23,7 +24,7 @@ const ESPACES: Espace[] = [
     desc: "Gérez le catalogue, les promotions, les bannières et l'application mobile.",
     chips: ['Produits', 'Promotions', 'Bannières', 'Vendeurs', 'Commandes'],
     icon: 'shopping-bag',
-    useLogo: true,
+    logo: LOGO_BOUTIQUE,
   },
   {
     id: 'shipment',
@@ -33,6 +34,7 @@ const ESPACES: Espace[] = [
     desc: 'Pilotez les expéditions, les conteneurs, les tarifs et le suivi client.',
     chips: ['Expéditions', 'Conteneurs', 'Suivi', 'Tarifs', 'Clients'],
     icon: 'ship',
+    logo: LOGO_REK,
   },
 ];
 
@@ -43,9 +45,6 @@ export const AppSelector = () => {
     <div className="auth-page selector-page">
       <div className="selector-shell">
         <div className="selector-head">
-          <div className="selector-brand-tile">
-            <img src={LOGO} alt="Yobante" />
-          </div>
           <span className="selector-eyebrow">Plateforme d'administration</span>
           <div className="selector-title">Bienvenue sur Yobante</div>
           <div className="selector-sub">Choisissez l'espace que vous souhaitez gérer</div>
@@ -60,8 +59,8 @@ export const AppSelector = () => {
               onClick={() => selectApp(e.id)}
             >
               <div className="selector-card-logo">
-                {e.useLogo ? (
-                  <img src={LOGO} alt={e.titre} />
+                {e.logo ? (
+                  <img src={e.logo} alt={e.titre} style={{ maxHeight: 48, objectFit: 'contain' }} />
                 ) : (
                   <Icon name={e.icon} size={40} />
                 )}
