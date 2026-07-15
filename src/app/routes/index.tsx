@@ -2,6 +2,7 @@
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SelectAppPage } from '@/pages/select-app/SelectAppPage';
 import { PrivateRoute } from './PrivateRoute';
+import { PublicRoute } from './PublicRoute';
 import { AppSelectGuard } from './AppSelectGuard';
 import { ShopDashboard } from '@/pages/shop/dashboard/DashboardPage';
 import { ShipmentDashboard } from '@/pages/shipment/dashboard/DashboardPage';
@@ -41,10 +42,15 @@ export const router = createBrowserRouter(
           element: <Navigate to="/login" replace />,
         },
 
-        // Public routes
+        // Public routes — redirige vers select-app si déjà connecté
         {
-          path: 'login',
-          element: <LoginPage />,
+          element: <PublicRoute />,
+          children: [
+            {
+              path: 'login',
+              element: <LoginPage />,
+            },
+          ],
         },
 
         // Protected routes - Auth required
