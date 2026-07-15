@@ -20,9 +20,26 @@ export const boutiqueKeys = {
   categories: ['boutique', 'categories'] as const,
 };
 
+const DASHBOARD_OPTS = { staleTime: 60_000, refetchInterval: 60_000 } as const;
+
 // ─── Dashboard ────────────────────────────────────────────────
 export const useDashboardStats = () =>
-  useQuery({ queryKey: boutiqueKeys.stats, queryFn: api.getDashboardStats });
+  useQuery({ queryKey: boutiqueKeys.stats, queryFn: api.getDashboardStats, ...DASHBOARD_OPTS });
+
+export const useDashboardOverview = () =>
+  useQuery({ queryKey: ['boutique', 'overview'], queryFn: api.getDashboardOverview, ...DASHBOARD_OPTS });
+
+export const useTopProduits = () =>
+  useQuery({ queryKey: ['boutique', 'top-produits'], queryFn: api.getTopProduits, ...DASHBOARD_OPTS });
+
+export const useClientsActifs = (limit = 5) =>
+  useQuery({ queryKey: ['boutique', 'clients-actifs', limit], queryFn: () => api.getClientsActifs(limit), ...DASHBOARD_OPTS });
+
+export const useStockAlertes = () =>
+  useQuery({ queryKey: ['boutique', 'stock-alertes'], queryFn: api.getStockAlertes, ...DASHBOARD_OPTS });
+
+export const useKpiStocks = () =>
+  useQuery({ queryKey: ['boutique', 'kpi-stocks'], queryFn: api.getKpiStocks, ...DASHBOARD_OPTS });
 
 // ─── Produits ─────────────────────────────────────────────────
 export const useProduits = (params?: Record<string, any>) =>
@@ -188,6 +205,18 @@ export const useToggleVendeur = () => {
     mutationFn: (id: string) => api.toggleVendeur(id),
     onSuccess: () => invalidate(),
     onError: (e: any) => toast.error(e?.message || 'Erreur'),
+  });
+};
+
+export const useCreerVendeur = () => {
+  const invalidate = useInvalidate([boutiqueKeys.vendeurs, boutiqueKeys.stats]);
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.creerVendeur(data),
+    onSuccess: () => {
+      toast.success('Vendeur créé avec succès');
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message || 'Erreur lors de la création'),
   });
 };
 

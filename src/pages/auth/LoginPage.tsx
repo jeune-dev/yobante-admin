@@ -57,8 +57,6 @@ export const LoginPage = () => {
         {/* ── Formulaire ── */}
         <main className="auth-form-side">
           <form className="auth-form" onSubmit={handleSubmit}>
-            <img className="auth-wordmark" src={LOGO} alt="Yobante" />
-
             <h2>Connexion</h2>
             <p className="auth-form-sub">Accédez à votre espace d'administration</p>
 

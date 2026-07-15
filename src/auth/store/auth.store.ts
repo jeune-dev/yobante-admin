@@ -56,12 +56,10 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'auth-store',
+      // Seul selectedApp est persisté — les tokens et données sensibles restent en mémoire.
+      // La session est restaurée au démarrage via le cookie HttpOnly (silent refresh).
       partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
         selectedApp: state.selectedApp,
-        user: state.user,
-        isShopAvailable: state.isShopAvailable,
-        isShipmentAvailable: state.isShipmentAvailable,
       }),
     }
   )

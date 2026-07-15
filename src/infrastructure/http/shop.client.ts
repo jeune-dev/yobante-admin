@@ -35,25 +35,17 @@ shopClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Try to refresh token — le backend attend { refreshToken } dans le body
-        const refreshToken = tokenManager.getShopRefreshToken();
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-
+        // Refresh token envoyé automatiquement via cookie HttpOnly (withCredentials: true)
         const response = await axios.post(
           `${ENV.VITE_SHOP_API_URL}/auth/refresh`,
-          { refreshToken },
+          {},
           { withCredentials: true }
         );
 
-        // Réponse : { success, message, data: { token, refreshToken } }
+        // Réponse : { success, message, data: { token } } — plus de refreshToken dans le body
         const newToken = response.data?.data?.token;
-        const newRefreshToken = response.data?.data?.refreshToken;
+        if (!newToken) throw new Error('No token in refresh response');
         tokenManager.setShopToken(newToken);
-        if (newRefreshToken) {
-          tokenManager.setShopRefreshToken(newRefreshToken);
-        }
 
         // Retry original request
         originalRequest.headers.Authorization = `Bearer ${newToken}`;

@@ -1,49 +1,21 @@
-﻿const KEYS = {
-  SHOP: 'token_shop',
-  SHOP_REFRESH: 'refresh_token_shop',
-  SHIPMENT: 'token_shipment',
-} as const;
+// Tokens stockés en mémoire JS uniquement — inaccessibles depuis localStorage.
+// Le refresh token est géré par cookie HttpOnly côté serveur.
+// Avantage : une XSS ne peut pas voler les tokens via document.cookie ou localStorage.
+
+let shopToken: string | null = null;
+let shipmentToken: string | null = null;
 
 export const tokenManager = {
-  // Shop tokens
-  getShopToken: (): string | null => {
-    return localStorage.getItem(KEYS.SHOP);
-  },
+  getShopToken: (): string | null => shopToken,
+  setShopToken: (token: string): void => { shopToken = token; },
+  removeShopToken: (): void => { shopToken = null; },
 
-  setShopToken: (token: string): void => {
-    localStorage.setItem(KEYS.SHOP, token);
-  },
+  getShipmentToken: (): string | null => shipmentToken,
+  setShipmentToken: (token: string): void => { shipmentToken = token; },
+  removeShipmentToken: (): void => { shipmentToken = null; },
 
-  removeShopToken: (): void => {
-    localStorage.removeItem(KEYS.SHOP);
-  },
-
-  // Shop refresh token (envoyé dans le body de /auth/refresh)
-  getShopRefreshToken: (): string | null => {
-    return localStorage.getItem(KEYS.SHOP_REFRESH);
-  },
-
-  setShopRefreshToken: (token: string): void => {
-    localStorage.setItem(KEYS.SHOP_REFRESH, token);
-  },
-
-  // Shipment tokens
-  getShipmentToken: (): string | null => {
-    return localStorage.getItem(KEYS.SHIPMENT);
-  },
-
-  setShipmentToken: (token: string): void => {
-    localStorage.setItem(KEYS.SHIPMENT, token);
-  },
-
-  removeShipmentToken: (): void => {
-    localStorage.removeItem(KEYS.SHIPMENT);
-  },
-
-  // Clear all tokens (logout)
   clearAll: (): void => {
-    localStorage.removeItem(KEYS.SHOP);
-    localStorage.removeItem(KEYS.SHOP_REFRESH);
-    localStorage.removeItem(KEYS.SHIPMENT);
+    shopToken = null;
+    shipmentToken = null;
   },
 };

@@ -6,7 +6,6 @@ import {
   useModifierPromotion,
   useSupprimerPromotion,
   useTogglePromotion,
-  useBlocsPromo,
   useUpdateBlocPromo,
 } from '@/domains/shop/hooks/useAdminBoutique';
 import Icon from '@/shared/components/dashboard/Icon';
@@ -55,7 +54,8 @@ interface BlocMeta { id: string; section: SectionId; titre?: string; sousTitre?:
 
 export default function PromotionsPanel() {
   const { data, isLoading, isError } = usePromotionsParSection();
-  const { data: blocsData } = useBlocsPromo();
+  // useBlocsPromo désactivé : l'endpoint /admin/blocs-promo n'existe pas encore sur le backend déployé
+  const blocsData: any = undefined;
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [blocEditor, setBlocEditor] = useState<SectionId | null>(null);
   const supprimer = useSupprimerPromotion();

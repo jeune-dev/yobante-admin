@@ -15,6 +15,7 @@ import PromotionsPanel from './panels/PromotionsPanel';
 import DemandesPanel from './panels/DemandesPanel';
 import VendeursPanel from './panels/VendeursPanel';
 import AdminsPanel from './panels/AdminsPanel';
+import { PanelErrorBoundary } from '@/shared/components/dashboard/PanelErrorBoundary';
 
 type NavItem =
   | { section: string }
@@ -88,6 +89,7 @@ export const ShopDashboard = () => {
                 className={`db-nav-item${page === item.id ? ' active' : ''}`}
                 data-label={item.label}
                 onClick={() => setPage(item.id)}
+                style={!sbOpen ? { justifyContent: 'center', padding: '0.7rem 0', gap: 0, borderLeftColor: 'transparent' } : undefined}
               >
                 <Icon name={item.icon} size={18} />
                 <span className="db-nav-label">{item.label}</span>
@@ -122,12 +124,6 @@ export const ShopDashboard = () => {
         </div>
       </aside>
 
-      {!sbOpen && (
-        <button className="db-sb-mini-toggle" onClick={() => setSbOpen(true)} title="Ouvrir le menu">
-          <Icon name="chevron-right" size={20} style={{ transform: 'rotate(180deg)' }} />
-        </button>
-      )}
-
       <div className={`db-main${sbOpen ? '' : ' wide'}`}>
         <header className="db-topbar">
           <div>
@@ -138,16 +134,18 @@ export const ShopDashboard = () => {
 
         <div className="db-content">
           <div className="db-panel active">
-            {page === 'overview' && <OverviewPanel />}
-            {page === 'produits' && <ProduitsPanel />}
-            {page === 'sections' && <SectionsPanel />}
-            {page === 'commandes' && <CommandesPanel />}
-            {page === 'clients' && <ClientsPanel />}
-            {page === 'bannieres' && <BannieresPanel />}
-            {page === 'promotions' && <PromotionsPanel />}
-            {page === 'demandes' && <DemandesPanel />}
-            {page === 'vendeurs' && <VendeursPanel />}
-            {page === 'admins' && <AdminsPanel />}
+            <PanelErrorBoundary panel={PAGES[page]?.t ?? page}>
+              {page === 'overview'    && <OverviewPanel />}
+              {page === 'produits'    && <ProduitsPanel />}
+              {page === 'sections'    && <SectionsPanel />}
+              {page === 'commandes'   && <CommandesPanel />}
+              {page === 'clients'     && <ClientsPanel />}
+              {page === 'bannieres'   && <BannieresPanel />}
+              {page === 'promotions'  && <PromotionsPanel />}
+              {page === 'demandes'    && <DemandesPanel />}
+              {page === 'vendeurs'    && <VendeursPanel />}
+              {page === 'admins'      && <AdminsPanel />}
+            </PanelErrorBoundary>
           </div>
         </div>
       </div>

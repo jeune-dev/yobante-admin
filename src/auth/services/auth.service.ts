@@ -21,20 +21,17 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
-// Forme de réponse du backend boutique (Render) :
-// { success, message, data: { token, refreshToken, user } }
+// Forme de réponse du backend boutique :
+// { success, message, data: { token, user } } — refreshToken via cookie HttpOnly
 interface ShopLoginBody {
   data?: {
     token?: string;
-    refreshToken?: string;
     user?: AuthUser;
   };
 }
 
-// Normalise la réponse boutique vers { accessToken, user }
 const normalizeShopAuth = (body: ShopLoginBody): AuthResponse => ({
   accessToken: body?.data?.token ?? '',
-  refreshToken: body?.data?.refreshToken,
   user: body?.data?.user as AuthUser,
 });
 
@@ -46,13 +43,19 @@ export interface LoginResult {
 
 export const authService = {
   login: async (payload: LoginPayload): Promise<LoginResult> => {
+    const shipmentUrl = import.meta.env.VITE_SHIPMENT_API_URL ?? '';
+    const shipmentAvailable = !shipmentUrl.includes('localhost') && !shipmentUrl.includes('127.0.0.1');
+
     const results = await Promise.allSettled([
       // Backend boutique : attend { identifiant, password }
       shopClient.post('/auth/login', {
         identifiant: payload.email,
         password: payload.password,
       }),
-      shipmentClient.post('/auth/login', payload),
+      // Skip si le back colis tourne en local et n'est pas démarré
+      shipmentAvailable
+        ? shipmentClient.post('/auth/login', payload)
+        : Promise.reject(new Error('Shipment backend non disponible')),
     ]);
 
     const shopResult =
@@ -68,9 +71,7 @@ export const authService = {
     // Store tokens
     if (shopResult.success && shopResult.data) {
       tokenManager.setShopToken(shopResult.data.accessToken);
-      if (shopResult.data.refreshToken) {
-        tokenManager.setShopRefreshToken(shopResult.data.refreshToken);
-      }
+      // Refresh token reçu via cookie HttpOnly — pas besoin de le stocker côté JS
     }
 
     if (shipmentResult.success && shipmentResult.data) {

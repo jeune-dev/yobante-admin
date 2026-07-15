@@ -17,23 +17,37 @@ const unwrap = async <T = any>(p: Promise<unknown>): Promise<T> => {
 const multipart = { headers: { 'Content-Type': undefined as unknown as string } };
 
 // ─── Dashboard ────────────────────────────────────────────────
-export interface DashboardStats {
+export interface DashboardStatsData {
   totalClients: number;
+  totalVendeurs: number;
+  totalCategories: number;
   totalProduits: number;
   totalCommandes: number;
   chiffreAffaires: number;
 }
 export const getDashboardStats = () =>
-  unwrap<DashboardStats>(shopClient.get('/admin/dashboard/stats'));
+  unwrap<DashboardStatsData>(shopClient.get('/admin/dashboard/stats'));
+
+export const getDashboardOverview = () =>
+  unwrap<DashboardStatsData & {
+    produitsEnAttente: number; produitsEnRupture: number; stockFaible: number;
+    topProduits: any[]; clientsActifs: any[];
+  }>(shopClient.get('/admin/dashboard/overview'));
 
 export const getCommandesParStatut = () =>
   unwrap<{ stats: any[] }>(shopClient.get('/admin/dashboard/commandes-statut'));
 
 export const getTopProduits = () =>
-  unwrap(shopClient.get('/admin/dashboard/top-produits'));
+  unwrap<{ produits: any[] }>(shopClient.get('/admin/dashboard/top-produits'));
+
+export const getClientsActifs = (limit = 5) =>
+  unwrap<{ clients: any[] }>(shopClient.get('/admin/dashboard/clients-actifs', { params: { limit } }));
 
 export const getStockAlertes = () =>
-  unwrap(shopClient.get('/admin/dashboard/stock-alertes'));
+  unwrap<{ produits: any[] }>(shopClient.get('/admin/dashboard/stock-alertes'));
+
+export const getKpiStocks = () =>
+  unwrap<{ kpi: any; produitsRupture: any[] }>(shopClient.get('/admin/dashboard/kpi-stocks'));
 
 // ─── Produits ─────────────────────────────────────────────────
 export const listerProduits = (params?: Record<string, any>) =>
@@ -140,6 +154,9 @@ export const rejeterVendeur = (id: string, motif?: string) =>
 
 export const toggleVendeur = (id: string) =>
   unwrap(shopClient.patch(`/admin/vendeurs/${id}/toggle`));
+
+export const creerVendeur = (data: Record<string, any>) =>
+  unwrap(shopClient.post('/admin/vendeurs', data));
 
 // ─── Bannières ────────────────────────────────────────────────
 export const listerBannieres = () =>
