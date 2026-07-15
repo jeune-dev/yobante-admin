@@ -53,7 +53,8 @@ export default function DemandesPanel() {
                     <td>{fcfa(d.prix)}</td>
                     <td>
                       <div className="db-actions">
-                        <button className="db-btn-ghost" style={{ color: '#065f46', borderColor: '#065f46' }} disabled={valider.isPending} onClick={() => valider.mutate({ id: d.id, step: 1 })}>Valider</button>
+                        <button className="db-btn-ghost" style={{ color: '#065f46', borderColor: '#065f46', fontSize: '0.78rem' }} disabled={valider.isPending} onClick={() => valider.mutate({ id: d.id, step: 1 })}>Étape 1 ✓</button>
+                        <button className="db-btn-ghost" style={{ color: '#1a56db', borderColor: '#1a56db', fontSize: '0.78rem' }} disabled={valider.isPending} onClick={() => valider.mutate({ id: d.id, step: 2 })}>Étape 2 ✓</button>
                         <button className="db-btn-danger" onClick={() => { setRejet(d); setMotif(''); }}>Rejeter</button>
                       </div>
                     </td>

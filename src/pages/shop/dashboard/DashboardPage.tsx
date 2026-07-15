@@ -114,7 +114,7 @@ export const ShopDashboard = () => {
           <div className="db-admin-pill">
             <div className="db-admin-ava">{user ? `${user.nom[0]}${user.prenom[0]}`.toUpperCase() : 'A'}</div>
             <div className="db-admin-info">
-              <div className="db-admin-name">{user ? `${user.nom} ${user.prenom}` : 'Administrateur'}</div>
+              <div className="db-admin-name">{user ? `${user.prenom} ${user.nom}` : 'Administrateur'}</div>
               <div className="db-admin-role">{user?.role || 'Admin'}</div>
             </div>
             <button className="db-logout-btn" onClick={handleLogout} title="Déconnexion">

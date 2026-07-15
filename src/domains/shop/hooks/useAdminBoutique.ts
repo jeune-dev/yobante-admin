@@ -131,6 +131,24 @@ export const useCommandes = (params?: Record<string, any>) =>
     queryFn: () => api.listerCommandes(params),
   });
 
+export const useValiderCommande = () => {
+  const invalidate = useInvalidate([boutiqueKeys.commandes()]);
+  return useMutation({
+    mutationFn: (id: string) => api.validerCommande(id),
+    onSuccess: () => { toast.success('Commande validée'); invalidate(); },
+    onError: (e: any) => toast.error(e?.message || 'Erreur'),
+  });
+};
+
+export const useRejeterCommande = () => {
+  const invalidate = useInvalidate([boutiqueKeys.commandes()]);
+  return useMutation({
+    mutationFn: ({ id, motif }: { id: string; motif?: string }) => api.rejeterCommande(id, motif),
+    onSuccess: () => { toast.success('Commande rejetée'); invalidate(); },
+    onError: (e: any) => toast.error(e?.message || 'Erreur'),
+  });
+};
+
 // ─── Clients ──────────────────────────────────────────────────
 export const useClients = (params?: Record<string, any>) =>
   useQuery({
@@ -232,6 +250,15 @@ export const useCreerVendeur = () => {
 // ─── Bannières ────────────────────────────────────────────────
 export const useBannieres = () =>
   useQuery({ queryKey: boutiqueKeys.bannieres, queryFn: api.listerBannieres });
+
+export const useCreerBanniere = () => {
+  const invalidate = useInvalidate([boutiqueKeys.bannieres]);
+  return useMutation({
+    mutationFn: (data: FormData) => api.creerBanniere(data),
+    onSuccess: () => { toast.success('Bannière ajoutée'); invalidate(); },
+    onError: (e: any) => toast.error(e?.message || 'Erreur'),
+  });
+};
 
 export const useSupprimerBanniere = () => {
   const invalidate = useInvalidate([boutiqueKeys.bannieres]);
