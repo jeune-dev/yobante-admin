@@ -27,6 +27,7 @@ const statutValidation = (v: Vendeur) => {
 };
 
 const EMPTY = { prenom: '', nom: '', email: '', password: '', telephone: '', nomBoutique: '', description: '' };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function VendeursPanel() {
   const [page, setPage] = useState(1);
@@ -49,7 +50,7 @@ export default function VendeursPanel() {
     const e: Partial<typeof EMPTY> = {};
     if (!form.prenom.trim()) e.prenom = 'Requis';
     if (!form.nom.trim())    e.nom    = 'Requis';
-    if (!form.email.trim())  e.email  = 'Requis';
+    if (!form.email.trim() || !EMAIL_RE.test(form.email)) e.email = 'Email invalide';
     if (!form.password || form.password.length < 6) e.password = 'Min. 6 caractères';
     if (!form.nomBoutique.trim()) e.nomBoutique = 'Requis';
     setErrors(e);

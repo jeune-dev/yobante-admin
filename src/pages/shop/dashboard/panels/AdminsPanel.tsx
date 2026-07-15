@@ -14,6 +14,7 @@ interface Admin {
 }
 
 const EMPTY = { nom: '', prenom: '', email: '', telephone: '', password: '' };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function AdminsPanel() {
   const { data, isLoading, isError } = useAdmins();
@@ -22,13 +23,20 @@ export default function AdminsPanel() {
   const toggle = useToggleAdmin();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [errors, setErrors] = useState<Partial<typeof EMPTY>>({});
   const [confirmDelete, setConfirmDelete] = useState<Admin | null>(null);
 
   const admins: Admin[] = data?.admins ?? [];
 
   const handleCreer = () => {
-    if (!form.nom || !form.prenom || !form.email || !form.password) return;
-    creer.mutate(form, { onSuccess: () => { setModal(false); setForm(EMPTY); } });
+    const e: Partial<typeof EMPTY> = {};
+    if (!form.nom.trim())    e.nom    = 'Requis';
+    if (!form.prenom.trim()) e.prenom = 'Requis';
+    if (!form.email.trim() || !EMAIL_RE.test(form.email)) e.email = 'Email invalide';
+    if (!form.password || form.password.length < 6) e.password = 'Min. 6 caractères';
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+    creer.mutate(form, { onSuccess: () => { setModal(false); setForm(EMPTY); setErrors({}); } });
   };
 
   return (
@@ -83,22 +91,25 @@ export default function AdminsPanel() {
           <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
             <div className="db-modal-head">
               <div className="db-modal-title">Ajouter un administrateur</div>
-              <button className="db-modal-close" onClick={() => setModal(false)}><Icon name="x" size={14} /></button>
+              <button className="db-modal-close" onClick={() => { setModal(false); setErrors({}); }}><Icon name="x" size={14} /></button>
             </div>
             <div style={{ padding: '0 1.65rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                 <div className="db-form-group">
                   <label className="db-form-label">Prénom</label>
-                  <input className="db-form-input" value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} />
+                  <input className="db-form-input" style={errors.prenom ? { borderColor: '#dc2626' } : {}} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} />
+                  {errors.prenom && <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>{errors.prenom}</span>}
                 </div>
                 <div className="db-form-group">
                   <label className="db-form-label">Nom</label>
-                  <input className="db-form-input" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+                  <input className="db-form-input" style={errors.nom ? { borderColor: '#dc2626' } : {}} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+                  {errors.nom && <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>{errors.nom}</span>}
                 </div>
               </div>
               <div className="db-form-group">
                 <label className="db-form-label">Email</label>
-                <input className="db-form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <input className="db-form-input" style={errors.email ? { borderColor: '#dc2626' } : {}} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                {errors.email && <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>{errors.email}</span>}
               </div>
               <div className="db-form-group">
                 <label className="db-form-label">Téléphone</label>
@@ -106,11 +117,12 @@ export default function AdminsPanel() {
               </div>
               <div className="db-form-group">
                 <label className="db-form-label">Mot de passe</label>
-                <input className="db-form-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 car., 1 majuscule, 1 chiffre" />
+                <input className="db-form-input" style={errors.password ? { borderColor: '#dc2626' } : {}} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min. 6 caractères" />
+                {errors.password && <span style={{ fontSize: '0.75rem', color: '#dc2626' }}>{errors.password}</span>}
               </div>
             </div>
             <div className="db-modal-footer">
-              <button className="db-btn secondary" onClick={() => setModal(false)}>Annuler</button>
+              <button className="db-btn secondary" onClick={() => { setModal(false); setErrors({}); }}>Annuler</button>
               <button className="db-btn primary" disabled={creer.isPending} onClick={handleCreer}>Créer</button>
             </div>
           </div>
