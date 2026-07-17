@@ -35,6 +35,11 @@ const normalizeShopAuth = (body: ShopLoginBody): AuthResponse => ({
   user: body?.data?.user as AuthUser,
 });
 
+const normalizeShipmentAuth = (body: any): AuthResponse => ({
+  accessToken: body?.data?.accessToken ?? '',
+  user: body?.data?.utilisateur as AuthUser,
+});
+
 export interface LoginResult {
   shop: { success: boolean; data?: AuthResponse; error?: any };
   shipment: { success: boolean; data?: AuthResponse; error?: any };
@@ -65,7 +70,7 @@ export const authService = {
 
     const shipmentResult =
       results[1].status === 'fulfilled'
-        ? { success: true, data: results[1].value as unknown as AuthResponse }
+        ? { success: true, data: normalizeShipmentAuth((results[1].value as any)?.data) }
         : { success: false, error: results[1].reason };
 
     // Store tokens
