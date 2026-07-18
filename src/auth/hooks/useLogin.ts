@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { authService, LoginPayload } from '@/auth/services/auth.service';
 import { useAuthStore } from '@/auth/store/auth.store';
 
-export const useLogin = () => {
+export const useLogin = (onBothAvailable?: () => void) => {
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
   const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
@@ -17,7 +17,6 @@ export const useLogin = () => {
       setLoading(true);
     },
     onSuccess: (result) => {
-      // Aucun backend n'a authentifié l'utilisateur → identifiants invalides / serveur injoignable
       if (!result.user) {
         const message =
           result.shop.error?.message ||
@@ -28,14 +27,23 @@ export const useLogin = () => {
         return;
       }
 
-      // Store user and token availability
       setUser(result.user);
       setAuthenticated(true);
       setTokenAvailability(result.shop.success, result.shipment.success);
 
-      // On affiche TOUJOURS la page de choix d'espace (Boutique / Colis).
-      useAuthStore.getState().setSelectedApp(null);
-      navigate('/select-app');
+      if (result.shop.success && result.shipment.success) {
+        // Les 2 backs ont répondu → ouvrir le modal de choix
+        useAuthStore.getState().setSelectedApp(null);
+        onBothAvailable?.();
+      } else if (result.shop.success) {
+        // Seulement la boutique → redirection directe
+        useAuthStore.getState().setSelectedApp('shop');
+        navigate('/boutique/dashboard');
+      } else {
+        // Seulement le colis → redirection directe
+        useAuthStore.getState().setSelectedApp('shipment');
+        navigate('/colis/dashboard');
+      }
 
       setLoading(false);
     },
