@@ -129,6 +129,12 @@ export const listerVendeurs = (params?: Record<string, any>) =>
 export const getVendeur = (id: string) =>
   unwrap(shopClient.get(`/admin/vendeurs/${id}`));
 
+// Création d'un compte vendeur (user rôle VENDEUR + profil boutique)
+// Champs : nom, prenom, email, password, nomBoutique (requis) ;
+// telephone, adresseBoutique, description, infoLegale (optionnels)
+export const creerVendeur = (data: Record<string, any>) =>
+  unwrap(shopClient.post('/admin/vendeurs', data));
+
 export const validerVendeurStep1 = (id: string) =>
   unwrap(shopClient.patch(`/admin/vendeurs/${id}/valider-step1`));
 

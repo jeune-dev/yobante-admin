@@ -5,7 +5,7 @@ import { useAuthStore } from '@/auth/store/auth.store';
 import { toast } from 'react-toastify';
 import Icon from '@/shared/components/dashboard/Icon';
 import '@/assets/css/Login.css';
-import LOGO from '@/assets/images/logo.png';
+import { PICTO } from '@/assets/images/logos';
 
 const FEATURES = [
   'Boutique en ligne & catalogue produits',
@@ -64,7 +64,7 @@ export const LoginPage = () => {
         <aside className="auth-brand">
           <div className="auth-brand-inner">
             <div className="auth-logo-tile">
-              <img src={LOGO} alt="Yobante" />
+              <img src={PICTO} alt="Yobante" />
             </div>
             <h1>
               Pilotez tout <span className="accent">Yobante</span> depuis un seul endroit
@@ -88,8 +88,6 @@ export const LoginPage = () => {
         {/* ── Formulaire ── */}
         <main className="auth-form-side">
           <form className="auth-form" onSubmit={handleSubmit}>
-            <img className="auth-wordmark" src={LOGO} alt="Yobante" />
-
             <h2>Connexion</h2>
             <p className="auth-form-sub">Accédez à votre espace d'administration</p>
 

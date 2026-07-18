@@ -178,13 +178,13 @@ function BlocEditor({ section, sectionLabel, meta, onClose }: {
   };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 500, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+    <div onClick={onClose} className="db-pop-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="db-pop" style={{ maxWidth: 500 }}>
         <div className="db-modal-head">
           <div className="db-modal-title">Bloc « {sectionLabel} »</div>
           <button className="db-modal-close" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
-        <div style={{ padding: '0 1.65rem' }}>
+        <div className="db-pop-body">
           <div style={{ height: 140, borderRadius: 12, overflow: 'hidden', background: '#eef1f6', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
             {preview ? <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="image" size={30} />}
           </div>
@@ -296,8 +296,8 @@ function PromotionEditor({ section, sectionLabel, promo, onClose }: {
   const busy = creer.isPending || modifier.isPending;
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+    <div onClick={onClose} className="db-pop-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="db-pop" style={{ maxWidth: 560 }}>
         <div className="db-modal-head">
           <div className="db-modal-title">
             {promo ? 'Modifier la promotion' : 'Ajouter un produit'} · {sectionLabel}
@@ -305,7 +305,7 @@ function PromotionEditor({ section, sectionLabel, promo, onClose }: {
           <button className="db-modal-close" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
 
-        <div style={{ padding: '0 1.65rem 0.5rem' }}>
+        <div className="db-pop-body">
           {/* Choix du produit */}
           {!promo && (
             <div className="db-form-group">

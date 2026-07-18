@@ -120,13 +120,13 @@ export default function ProduitsPanel() {
       {editor && <ProductEditor produit={editor.produit} onClose={() => setEditor(null)} />}
 
       {confirmDelete && (
-        <div onClick={() => setConfirmDelete(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 440, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+        <div onClick={() => setConfirmDelete(null)} className="db-pop-overlay">
+          <div onClick={(e) => e.stopPropagation()} className="db-pop" style={{ maxWidth: 440 }}>
             <div className="db-modal-head">
               <div className="db-modal-title">Confirmer la suppression</div>
               <button className="db-modal-close" onClick={() => setConfirmDelete(null)}><Icon name="x" size={14} /></button>
             </div>
-            <div style={{ padding: '0 1.65rem 1.65rem', color: '#444' }}>
+            <div className="db-pop-body db-pop-text">
               Voulez-vous vraiment supprimer <strong>{confirmDelete.nom || confirmDelete.titre}</strong> ?
             </div>
             <div className="db-modal-footer">
@@ -194,13 +194,13 @@ function ProductEditor({ produit, onClose }: { produit: Produit | null; onClose:
   };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+    <div onClick={onClose} className="db-pop-overlay">
+      <div onClick={(e) => e.stopPropagation()} className="db-pop" style={{ maxWidth: 520 }}>
         <div className="db-modal-head">
           <div className="db-modal-title">{produit ? 'Modifier le produit' : 'Ajouter un produit'}</div>
           <button className="db-modal-close" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
-        <div style={{ padding: '0 1.65rem' }}>
+        <div className="db-pop-body">
           <div className="db-form-group">
             <label className="db-form-label">Nom du produit</label>
             <input className="db-form-input" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Huile de palme" />

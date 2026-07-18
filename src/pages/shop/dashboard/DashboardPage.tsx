@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/hooks/useAuth';
 import Icon from '@/shared/components/dashboard/Icon';
 import '@/assets/css/Dashboard.css';
-import LOGO from '@/assets/images/logo.png';
+import { PICTO } from '@/assets/images/logos';
 
 import OverviewPanel from './panels/OverviewPanel';
 import ProduitsPanel from './panels/ProduitsPanel';
@@ -66,7 +66,7 @@ export const ShopDashboard = () => {
     <div className="db-app boutique">
       <aside className={`db-sb${sbOpen ? '' : ' closed'}`}>
         <div className="db-sb-top">
-          <img className="db-sb-logo" src={LOGO} alt="Yobante" style={{ objectFit: 'contain', background: '#fff', padding: 4 }} />
+          <img className="db-sb-logo" src={PICTO} alt="Yobante" style={{ objectFit: 'contain', background: '#fff', padding: 4 }} />
           <div className="db-sb-brand">
             <div className="db-sb-name">Yobante</div>
             <div className="db-sb-sub">Boutique</div>

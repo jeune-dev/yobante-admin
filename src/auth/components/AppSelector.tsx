@@ -1,7 +1,7 @@
 import { useAuth } from '@/auth/hooks/useAuth';
 import Icon from '@/shared/components/dashboard/Icon';
 import '@/assets/css/Login.css';
-import LOGO from '@/assets/images/logo.png';
+import { LOGO_BOUTIQUE_WHITE, LOGO_REK_WHITE } from '@/assets/images/logos';
 
 interface Espace {
   id: 'shop' | 'shipment';
@@ -10,8 +10,7 @@ interface Espace {
   titre: string;
   desc: string;
   chips: string[];
-  icon: string;
-  useLogo?: boolean;
+  image: string;
 }
 
 const ESPACES: Espace[] = [
@@ -22,8 +21,7 @@ const ESPACES: Espace[] = [
     titre: 'Yobante Boutique',
     desc: "Gérez le catalogue, les promotions, les bannières et l'application mobile.",
     chips: ['Produits', 'Promotions', 'Bannières', 'Vendeurs', 'Commandes'],
-    icon: 'shopping-bag',
-    useLogo: true,
+    image: LOGO_BOUTIQUE_WHITE,
   },
   {
     id: 'shipment',
@@ -32,7 +30,7 @@ const ESPACES: Espace[] = [
     titre: 'Yobante Colis',
     desc: 'Pilotez les expéditions, les conteneurs, les tarifs et le suivi client.',
     chips: ['Expéditions', 'Conteneurs', 'Suivi', 'Tarifs', 'Clients'],
-    icon: 'ship',
+    image: LOGO_REK_WHITE,
   },
 ];
 
@@ -43,9 +41,6 @@ export const AppSelector = () => {
     <div className="auth-page selector-page">
       <div className="selector-shell">
         <div className="selector-head">
-          <div className="selector-brand-tile">
-            <img src={LOGO} alt="Yobante" />
-          </div>
           <span className="selector-eyebrow">Plateforme d'administration</span>
           <div className="selector-title">Bienvenue sur Yobante</div>
           <div className="selector-sub">Choisissez l'espace que vous souhaitez gérer</div>
@@ -60,11 +55,7 @@ export const AppSelector = () => {
               onClick={() => selectApp(e.id)}
             >
               <div className="selector-card-logo">
-                {e.useLogo ? (
-                  <img src={LOGO} alt={e.titre} />
-                ) : (
-                  <Icon name={e.icon} size={40} />
-                )}
+                <img src={e.image} alt={e.titre} />
               </div>
               <div className="selector-card-title">{e.titre}</div>
               <div className="selector-card-desc">{e.desc}</div>

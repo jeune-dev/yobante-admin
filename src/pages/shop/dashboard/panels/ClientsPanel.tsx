@@ -119,8 +119,8 @@ export default function ClientsPanel() {
       </div>
 
       {selected && (
-        <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+        <div onClick={() => setSelected(null)} className="db-pop-overlay">
+          <div onClick={(e) => e.stopPropagation()} className="db-pop" style={{ maxWidth: 460 }}>
             <div style={{ background: 'linear-gradient(135deg, #1a56db, #3b7df5)', borderRadius: '18px 18px 0 0', padding: '2rem 1.65rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '3px solid rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>
                 {initiales(selected)}

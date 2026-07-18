@@ -169,6 +169,18 @@ export const useToggleAdmin = () => {
 export const useVendeurs = () =>
   useQuery({ queryKey: boutiqueKeys.vendeurs, queryFn: () => api.listerVendeurs() });
 
+export const useCreerVendeur = () => {
+  const invalidate = useInvalidate([boutiqueKeys.vendeurs]);
+  return useMutation({
+    mutationFn: (data: Record<string, any>) => api.creerVendeur(data),
+    onSuccess: () => {
+      toast.success('Compte vendeur créé');
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message || 'Erreur'),
+  });
+};
+
 export const useValiderVendeur = () => {
   const invalidate = useInvalidate([boutiqueKeys.vendeurs]);
   return useMutation({
