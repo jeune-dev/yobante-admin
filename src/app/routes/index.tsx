@@ -1,10 +1,25 @@
-﻿import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { SelectAppPage } from '@/pages/select-app/SelectAppPage';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { PrivateRoute } from './PrivateRoute';
-import { AppSelectGuard } from './AppSelectGuard';
-import { ShopDashboard } from '@/pages/shop/dashboard/DashboardPage';
+import ShopLayout from '@/layouts/ShopLayout';
+import ShipmentLayout from '@/layouts/ShipmentLayout';
+import { LoginPage } from '@/pages/auth/LoginPage';
+import ShopDashboard from '@/pages/shop/dashboard/DashboardPage';
+import RayonsPage from '@/pages/shop/rayons/RayonsPage';
+import ProductsPage from '@/pages/shop/products/ProductsPage';
+import ProductCreatePage from '@/pages/shop/products/ProductCreatePage';
+import ProductEditPage from '@/pages/shop/products/ProductEditPage';
+import OrdersPage from '@/pages/shop/orders/OrdersPage';
+import OrderDetailPage from '@/pages/shop/orders/OrderDetailPage';
+import UsersPage from '@/pages/shop/users/UsersPage';
+import UserDetailPage from '@/pages/shop/users/UserDetailPage';
+import VendeursPage from '@/pages/shop/vendeurs/VendeursPage';
+import DemandesPage from '@/pages/shop/demandes/DemandesPage';
+import BannieresPage from '@/pages/shop/bannieres/BannieresPage';
+import ReviewsPage from '@/pages/shop/reviews/ReviewsPage';
+import PaymentsPage from '@/pages/shop/payments/PaymentsPage';
+import SettingsPage from '@/pages/shop/settings/SettingsPage';
 import { ShipmentDashboard } from '@/pages/shipment/dashboard/DashboardPage';
+
 const NotFound = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="text-center">
@@ -23,46 +38,39 @@ export const router = createBrowserRouter(
       path: '/',
       errorElement: <NotFound />,
       children: [
-        // Redirect root to login
-        {
-          index: true,
-          element: <Navigate to="/login" replace />,
-        },
-
-        // Public routes
-        {
-          path: 'login',
-          element: <LoginPage />,
-        },
-
-        // Protected routes - Auth required
+        { index: true, element: <Navigate to="/login" replace /> },
+        { path: 'login', element: <LoginPage /> },
         {
           element: <PrivateRoute />,
           children: [
             {
-              path: 'select-app',
-              element: <SelectAppPage />,
-            },
-
-            // Shop routes
-            {
-              element: <AppSelectGuard requiredApp="shop" />,
+              path: 'boutique',
+              element: <ShopLayout />,
               children: [
-                {
-                  path: 'boutique/dashboard',
-                  element: <ShopDashboard />,
-                },
+                { index: true, element: <Navigate to="dashboard" replace /> },
+                { path: 'dashboard', element: <ShopDashboard /> },
+                { path: 'rayons', element: <RayonsPage /> },
+                { path: 'produits', element: <ProductsPage /> },
+                { path: 'produits/nouveau', element: <ProductCreatePage /> },
+                { path: 'produits/:id/modifier', element: <ProductEditPage /> },
+                { path: 'commandes', element: <OrdersPage /> },
+                { path: 'commandes/:id', element: <OrderDetailPage /> },
+                { path: 'clients', element: <UsersPage /> },
+                { path: 'clients/:id', element: <UserDetailPage /> },
+                { path: 'vendeurs', element: <VendeursPage /> },
+                { path: 'demandes', element: <DemandesPage /> },
+                { path: 'bannieres', element: <BannieresPage /> },
+                { path: 'avis', element: <ReviewsPage /> },
+                { path: 'paiements', element: <PaymentsPage /> },
+                { path: 'parametres', element: <SettingsPage /> },
               ],
             },
-
-            // Shipment routes
             {
-              element: <AppSelectGuard requiredApp="shipment" />,
+              path: 'colis',
+              element: <ShipmentLayout />,
               children: [
-                {
-                  path: 'colis/dashboard',
-                  element: <ShipmentDashboard />,
-                },
+                { index: true, element: <Navigate to="dashboard" replace /> },
+                { path: 'dashboard', element: <ShipmentDashboard /> },
               ],
             },
           ],

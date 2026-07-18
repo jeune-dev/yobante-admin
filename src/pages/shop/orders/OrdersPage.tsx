@@ -1,279 +1,216 @@
-import { useState, useRef } from 'react';
-import {
-  useOrders, useValiderCommande, useRejeterCommande,
-  usePreparationCommande, useExpedierCommande, useLivrerCommande,
-} from '@/domains/shop/hooks/useOrders';
-import { ordersApi, Order } from '@/domains/shop/api/orders.api';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import shopClient from '@/infrastructure/http/shop.client';
+import { toast } from 'react-toastify';
 
-function fmtFcfa(n: number) { return Number(n).toLocaleString('fr-FR') + ' FCFA'; }
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-const STATUTS: Record<string, { label: string; cls: string }> = {
-  en_attente:    { label: 'En attente',    cls: 'bgo' },
-  validee:       { label: 'Validée',       cls: 'bb' },
-  en_preparation:{ label: 'En préparation',cls: 'bb' },
-  expediee:      { label: 'Expédiée',      cls: 'bg' },
-  livree:        { label: 'Livrée',        cls: 'bg' },
-  annulee:       { label: 'Annulée',       cls: 'br' },
+const api = {
+  getCommandes: (p: any) =>
+    shopClient.get('/admin/commandes', { params: p }).then((r: any) => r.data),
+  getKpi: () => shopClient.get('/admin/commandes/kpi').then((r: any) => r.data),
+  valider: (id: string) => shopClient.patch(`/admin/commandes/${id}/valider`),
+  rejeter: (id: string, motif?: string) =>
+    shopClient.patch(`/admin/commandes/${id}/rejeter`, { motif }),
 };
 
-const PAIEMENT_LABELS: Record<string, string> = {
-  wave: 'Wave', orange_money: 'Orange Money', carte: 'Carte', cash_livraison: 'À la livraison',
+const STATUT_COLORS: Record<string, string> = {
+  en_attente: 'bg-yellow-100 text-yellow-700',
+  validee: 'bg-blue-100 text-blue-700',
+  en_preparation: 'bg-purple-100 text-purple-700',
+  expediee: 'bg-indigo-100 text-indigo-700',
+  livree: 'bg-green-100 text-green-700',
+  annulee: 'bg-red-100 text-red-700',
 };
 
-// ── Détail commande modal ───────────────────────────────────────────────────
-function OrderDetail({ id, onClose, onStatutChange }: {
-  id: string; onClose: () => void; onStatutChange: () => void;
-}) {
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(false);
+export default function OrdersPage() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [statut, setStatut] = useState('');
+  const [page, setPage] = useState(1);
 
-  useState(() => {
-    ordersApi.getById(id).then(o => { setOrder(o as any); setLoading(false); });
+  const { data } = useQuery({
+    queryKey: ['commandes', search, statut, page],
+    queryFn: () => api.getCommandes({ search, statut, page, limit: 20 }),
   });
 
-  const action = async (fn: () => Promise<any>) => {
-    setActing(true);
-    try { await fn(); onStatutChange(); onClose(); } finally { setActing(false); }
-  };
+  const { data: kpi } = useQuery({
+    queryKey: ['commandes-kpi'],
+    queryFn: api.getKpi,
+  });
 
-  const s = order ? STATUTS[order.statut] : null;
-  const items = (order as any)?.CommandeItems ?? [];
-  const total = items.reduce((a: number, i: any) => a + Number(i.sousTotal), 0);
+  const validerMutation = useMutation({
+    mutationFn: (id: string) => api.valider(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      qc.invalidateQueries({ queryKey: ['commandes-kpi'] });
+      toast.success('Commande validée');
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const rejeterMutation = useMutation({
+    mutationFn: (id: string) => api.rejeter(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      qc.invalidateQueries({ queryKey: ['commandes-kpi'] });
+      toast.success('Commande rejetée');
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const commandes = data?.commandes || [];
+  const pagination = data?.pagination;
 
   return (
-    <div className="db-modal-overlay db-modal-overlay--visible" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="db-modal db-modal--visible" style={{ maxWidth: 620, width: '96%', maxHeight: '90vh' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>Commande #{id.slice(0, 8).toUpperCase()}</span>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', color: 'var(--text2)' }}>✕</button>
-        </div>
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Commandes</h1>
 
-        <div style={{ overflowY: 'auto', flex: 1, padding: '1.2rem 1.4rem' }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', color: 'var(--text3)', padding: '2rem' }}>Chargement…</div>
-          ) : !order ? (
-            <div style={{ textAlign: 'center', color: 'var(--red)', padding: '2rem' }}>Erreur de chargement.</div>
-          ) : (
-            <>
-              {/* Infos client + statut */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginBottom: '1.1rem' }}>
-                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '0.9rem 1rem', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Client</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{(order as any).User?.nom} {(order as any).User?.prenom}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text3)', marginTop: 2 }}>{(order as any).User?.email}</div>
-                </div>
-                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '0.9rem 1rem', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Livraison</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{(order as any).Adresse?.ville ?? '—'}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text3)', marginTop: 2 }}>{(order as any).Adresse?.rue ?? ''}</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem', marginBottom: '1.1rem' }}>
-                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '0.9rem 1rem', border: '1px solid var(--border)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>Statut</div>
-                  <span className={`badge ${s?.cls}`}>{s?.label}</span>
-                </div>
-                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '0.9rem 1rem', border: '1px solid var(--border)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>Paiement</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.87rem' }}>{PAIEMENT_LABELS[order.methodePaiement] ?? order.methodePaiement}</div>
-                </div>
-                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '0.9rem 1rem', border: '1px solid var(--border)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>Date</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{fmtDate(order.createdAt)}</div>
-                </div>
-              </div>
-
-              {/* Articles */}
-              <div style={{ fontWeight: 700, fontSize: '0.87rem', marginBottom: '0.6rem', color: 'var(--black)' }}>Articles commandés</div>
-              <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: '1rem' }}>
-                <table style={{ margin: 0 }}>
-                  <thead><tr><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Sous-total</th></tr></thead>
-                  <tbody>
-                    {items.map((item: any) => (
-                      <tr key={item.id}>
-                        <td className="db-td-bold">{item.Produit?.nom ?? `Produit #${item.produitId}`}</td>
-                        <td>{item.quantite}</td>
-                        <td>{fmtFcfa(item.prixUnitaire)}</td>
-                        <td className="db-td-bold">{fmtFcfa(item.sousTotal)}</td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td colSpan={3} style={{ textAlign: 'right', fontWeight: 700, color: 'var(--black)' }}>Total</td>
-                      <td style={{ fontWeight: 700, color: 'var(--black)', fontSize: '1rem' }}>{fmtFcfa(total)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {order.note && (
-                <div style={{ background: 'var(--gray)', borderRadius: 8, padding: '0.7rem 1rem', fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '0.8rem' }}>
-                  <strong>Note client :</strong> {order.note}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Actions selon statut */}
-        {order && (
-          <div style={{ display: 'flex', gap: '0.5rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)', flexWrap: 'wrap', flexShrink: 0 }}>
-            {order.statut === 'en_attente' && <>
-              <button className="db-btn primary" disabled={acting} onClick={() => action(() => ordersApi.valider(id))}>Valider</button>
-              <button className="db-btn confirm" disabled={acting} onClick={() => action(() => ordersApi.rejeter(id))}>Rejeter</button>
-            </>}
-            {order.statut === 'validee' && (
-              <button className="db-btn primary" disabled={acting} onClick={() => action(() => ordersApi.preparation(id))}>Mettre en préparation</button>
-            )}
-            {order.statut === 'en_preparation' && (
-              <button className="db-btn primary" disabled={acting} onClick={() => action(() => ordersApi.expedier(id))}>Marquer expédiée</button>
-            )}
-            {order.statut === 'expediee' && (
-              <button className="db-btn primary" disabled={acting} onClick={() => action(() => ordersApi.livrer(id))}>Marquer livrée</button>
-            )}
-            <button className="db-btn secondary" style={{ marginLeft: 'auto' }} onClick={onClose}>Fermer</button>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total', value: kpi?.total, color: 'bg-gray-50' },
+          { label: 'En attente', value: kpi?.enAttente, color: 'bg-yellow-50' },
+          { label: 'Validées', value: kpi?.validees, color: 'bg-green-50' },
+          { label: 'Annulées', value: kpi?.annulees, color: 'bg-red-50' },
+        ].map((k) => (
+          <div key={k.label} className={`${k.color} rounded-xl p-4 border border-gray-100`}>
+            <p className="text-sm text-gray-500">{k.label}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{k.value ?? '…'}</p>
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Page principale ─────────────────────────────────────────────────────────
-export const OrdersPage = () => {
-  const [page, setPage] = useState(1);
-  const [statutFilter, setStatutFilter] = useState('');
-  const [detailId, setDetailId] = useState<string | null>(null);
-
-  const [toast, setToast] = useState({ msg: '', show: false });
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast({ msg, show: true });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2800);
-  };
-
-  const { data, isLoading, isError, refetch } = useOrders({ page, limit: 15, statut: statutFilter || undefined });
-
-  const orders = (data as any)?.rows ?? [];
-  const totalPages = (data as any)?.totalPages ?? 1;
-  const count = (data as any)?.count ?? 0;
-
-  const FILTRES = [
-    { label: 'Toutes', val: '' },
-    { label: 'En attente', val: 'en_attente' },
-    { label: 'Validées', val: 'validee' },
-    { label: 'En préparation', val: 'en_preparation' },
-    { label: 'Expédiées', val: 'expediee' },
-    { label: 'Livrées', val: 'livree' },
-    { label: 'Annulées', val: 'annulee' },
-  ];
-
-  return (
-    <div style={{ padding: '1.6rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
-        <div>
-          <div style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--black)' }}>Commandes</div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text3)', marginTop: 2 }}>{count} commande{count > 1 ? 's' : ''} au total</div>
-        </div>
-      </div>
-
-      {/* Filtres statut */}
-      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {FILTRES.map(f => (
-          <button key={f.val} className={`db-chip${statutFilter === f.val ? ' active' : ''}`}
-            onClick={() => { setStatutFilter(f.val); setPage(1); }}>
-            {f.label}
-          </button>
         ))}
       </div>
 
-      {/* Tableau */}
-      <div className="db-card">
-        {isLoading ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>Chargement…</div>
-        ) : isError ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--red)' }}>Erreur lors du chargement.</div>
-        ) : orders.length === 0 ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>Aucune commande trouvée.</div>
-        ) : (
-          <div className="db-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Référence</th>
-                  <th>Client</th>
-                  <th>Date</th>
-                  <th>Paiement</th>
-                  <th>Total</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o: Order) => {
-                  const items = (o as any).CommandeItems ?? [];
-                  const total = items.reduce((a: number, i: any) => a + Number(i.sousTotal), 0);
-                  const s = STATUTS[o.statut];
-                  return (
-                    <tr key={o.id}>
-                      <td className="db-td-bold" style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>
-                        #{o.id.slice(0, 8).toUpperCase()}
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: '0.87rem' }}>
-                          {(o as any).User?.nom} {(o as any).User?.prenom}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text3)' }}>{(o as any).User?.email}</div>
-                      </td>
-                      <td style={{ fontSize: '0.82rem', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                        {fmtDate(o.createdAt)}
-                      </td>
-                      <td style={{ fontSize: '0.83rem' }}>
-                        {PAIEMENT_LABELS[o.methodePaiement] ?? o.methodePaiement}
-                      </td>
-                      <td className="db-td-bold">{total > 0 ? fmtFcfa(total) : '—'}</td>
-                      <td><span className={`badge ${s?.cls}`}>{s?.label}</span></td>
-                      <td>
-                        <button className="db-btn-ghost" onClick={() => setDetailId(o.id)}>Voir détail</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
-            <button className="db-btn-ghost" disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Précédent</button>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text3)' }}>Page {page} / {totalPages}</span>
-            <button className="db-btn-ghost" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Suivant →</button>
-          </div>
-        )}
-      </div>
-
-      {detailId && (
-        <OrderDetail
-          id={detailId}
-          onClose={() => setDetailId(null)}
-          onStatutChange={() => { refetch(); showToast('Statut mis à jour'); }}
-        />
-      )}
-
-      <div className={`db-toast${toast.show ? ' show' : ''}`}>
-        <div className="db-toast-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}><polyline points="20 6 9 17 4 12"/></svg>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex gap-3 p-4 border-b border-gray-100">
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Rechercher…"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+          />
+          <select
+            value={statut}
+            onChange={(e) => {
+              setStatut(e.target.value);
+              setPage(1);
+            }}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="en_attente">En attente</option>
+            <option value="validee">Validée</option>
+            <option value="en_preparation">En préparation</option>
+            <option value="expediee">Expédiée</option>
+            <option value="livree">Livrée</option>
+            <option value="annulee">Annulée</option>
+          </select>
         </div>
-        {toast.msg}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left">
+                <th className="p-4 font-medium text-gray-500">Référence</th>
+                <th className="p-4 font-medium text-gray-500">Client</th>
+                <th className="p-4 font-medium text-gray-500">Montant</th>
+                <th className="p-4 font-medium text-gray-500">Articles</th>
+                <th className="p-4 font-medium text-gray-500">Statut</th>
+                <th className="p-4 font-medium text-gray-500">Date</th>
+                <th className="p-4 font-medium text-gray-500 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {commandes.map((c: any) => (
+                <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <td className="p-4 font-mono text-xs">{c.reference}</td>
+                  <td className="p-4">
+                    {c.user?.prenom} {c.user?.nom}
+                  </td>
+                  <td className="p-4 font-medium">
+                    {c.montantTotal?.toLocaleString('fr-FR')} FCFA
+                  </td>
+                  <td className="p-4 text-center">{c.items?.length || '—'}</td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${
+                        STATUT_COLORS[c.statut] || 'bg-gray-100'
+                      }`}
+                    >
+                      {c.statut}
+                    </span>
+                  </td>
+                  <td className="p-4 text-gray-500">
+                    {new Date(c.createdAt).toLocaleDateString('fr-FR')}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => navigate(`/boutique/commandes/${c.id}`)}
+                        title="Voir"
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                      {c.statut === 'en_attente' && (
+                        <>
+                          <button
+                            onClick={() => validerMutation.mutate(c.id)}
+                            title="Accepter"
+                            className="p-1.5 rounded hover:bg-green-50 text-gray-500 hover:text-green-600"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Rejeter cette commande ?')) rejeterMutation.mutate(c.id);
+                            }}
+                            title="Rejeter"
+                            className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {commandes.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-400">
+                    Aucune commande trouvée
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {pagination?.totalPages > 1 && (
+          <div className="flex justify-center p-4 gap-2">
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded text-sm ${
+                  page === p ? 'bg-yellow-500 text-white' : 'hover:bg-gray-100'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-};
+}

@@ -18,7 +18,7 @@ const METHODES: Record<string, string> = {
   wave: 'Wave', orange_money: 'Orange Money', carte: 'Carte', cash_livraison: 'À la livraison',
 };
 
-export const PaymentsPage = () => {
+export default function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [statutFilter, setStatutFilter] = useState('');
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null);

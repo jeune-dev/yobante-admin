@@ -18,7 +18,7 @@ function Stars({ note }: { note: number }) {
   );
 }
 
-export const ReviewsPage = () => {
+export default function ReviewsPage() {
   const [page, setPage] = useState(1);
   const [approvedFilter, setApprovedFilter] = useState<boolean | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<Review | null>(null);

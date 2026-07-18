@@ -10,7 +10,7 @@ function initiales(u: ShopUser) {
   return `${u.nom?.[0] ?? ''}${u.prenom?.[0] ?? ''}`.toUpperCase();
 }
 
-export const UsersPage = () => {
+export default function UsersPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);

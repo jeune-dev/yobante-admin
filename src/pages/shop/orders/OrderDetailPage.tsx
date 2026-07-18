@@ -1,1 +1,156 @@
-﻿// OrderDetailPage.tsx — Détail commande + actions
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import shopClient from '@/infrastructure/http/shop.client';
+import { toast } from 'react-toastify';
+
+const api = {
+  getCommande: (id: string) =>
+    shopClient.get(`/admin/commandes/${id}`).then((r: any) => r.data?.commande || r.data),
+  valider: (id: string) => shopClient.patch(`/admin/commandes/${id}/valider`),
+  rejeter: (id: string) => shopClient.patch(`/admin/commandes/${id}/rejeter`),
+};
+
+const STATUT_COLORS: Record<string, string> = {
+  en_attente: 'bg-yellow-100 text-yellow-700',
+  validee: 'bg-blue-100 text-blue-700',
+  en_preparation: 'bg-purple-100 text-purple-700',
+  expediee: 'bg-indigo-100 text-indigo-700',
+  livree: 'bg-green-100 text-green-700',
+  annulee: 'bg-red-100 text-red-700',
+};
+
+export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const { data: commande, isLoading } = useQuery({
+    queryKey: ['commande', id],
+    queryFn: () => api.getCommande(id!),
+    enabled: !!id,
+  });
+
+  const validerMutation = useMutation({
+    mutationFn: () => api.valider(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['commande', id] });
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      toast.success('Commande validée');
+    },
+  });
+
+  const rejeterMutation = useMutation({
+    mutationFn: () => api.rejeter(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['commande', id] });
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      toast.success('Commande rejetée');
+    },
+  });
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-gray-400">Chargement…</div>;
+  }
+
+  if (!commande) {
+    return <div className="p-8 text-center text-red-400">Commande introuvable</div>;
+  }
+
+  const items = commande.items || commande.CommandeItems || [];
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate('/boutique/commandes')}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Commande {commande.reference}
+        </h1>
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            STATUT_COLORS[commande.statut] || 'bg-gray-100'
+          }`}
+        >
+          {commande.statut}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Client</p>
+          <p className="font-semibold">
+            {commande.user?.prenom} {commande.user?.nom}
+          </p>
+          <p className="text-sm text-gray-500">{commande.user?.email}</p>
+          <p className="text-sm text-gray-500">{commande.user?.telephone}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Livraison</p>
+          <p className="font-semibold">{commande.adresse?.ville || '—'}</p>
+          <p className="text-sm text-gray-500">{commande.adresse?.rue || ''}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Paiement : {commande.methodePaiement}
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Articles</h2>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-left">
+              <th className="p-4 font-medium text-gray-500">Produit</th>
+              <th className="p-4 font-medium text-gray-500">Qté</th>
+              <th className="p-4 font-medium text-gray-500">Prix unit.</th>
+              <th className="p-4 font-medium text-gray-500">Sous-total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item: any) => (
+              <tr key={item.id} className="border-b border-gray-50">
+                <td className="p-4">{item.produit?.nom || item.Produit?.nom || `Produit #${item.produitId}`}</td>
+                <td className="p-4">{item.quantite}</td>
+                <td className="p-4">{item.prixUnitaire?.toLocaleString('fr-FR')} FCFA</td>
+                <td className="p-4 font-medium">{item.sousTotal?.toLocaleString('fr-FR')} FCFA</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex justify-end p-4 border-t border-gray-100">
+          <span className="font-bold text-lg">
+            Total : {commande.montantTotal?.toLocaleString('fr-FR')} FCFA
+          </span>
+        </div>
+      </div>
+
+      {commande.statut === 'en_attente' && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => validerMutation.mutate()}
+            disabled={validerMutation.isPending}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 disabled:opacity-60"
+          >
+            Valider la commande
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('Rejeter cette commande ?')) rejeterMutation.mutate();
+            }}
+            disabled={rejeterMutation.isPending}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-60"
+          >
+            Rejeter
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

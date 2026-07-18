@@ -1,405 +1,349 @@
-import { useState, useRef } from 'react';
-import {
-  useProducts, useCreateProduct, useUpdateProduct,
-  useDeleteProduct, useToggleVisibilite, useToggleFeatured, useUpdateStock,
-} from '@/domains/shop/hooks/useProducts';
-import { useCategories } from '@/domains/shop/hooks/useCategories';
-import { productsApi, Product } from '@/domains/shop/api/products.api';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import shopClient from '@/infrastructure/http/shop.client';
+import { toast } from 'react-toastify';
 
-function fmtFcfa(n: number) {
-  return Number(n).toLocaleString('fr-FR') + ' FCFA';
-}
+const api = {
+  getProduits: (p: any) =>
+    shopClient.get('/admin/produits', { params: p }).then((r: any) => r.data),
+  supprimerProduit: (id: string) => shopClient.delete(`/admin/produits/${id}`),
+  creerPromo: (produitId: string, data: any) =>
+    shopClient.post(`/admin/promotions/produit/${produitId}`, data),
+};
 
-function firstImage(images: any): string | null {
-  if (!images) return null;
-  const arr = typeof images === 'string' ? JSON.parse(images) : images;
-  return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
-}
+const SECTIONS = {
+  nos_promos_du_moment: { label: 'Promo du moment', title: 'Promo du moment' },
+  a_ne_pas_rater: { label: 'À ne pas rater', title: 'À ne pas rater' },
+  nos_promos_a_venir: { label: 'Promo à venir', title: 'Promo à venir' },
+} as const;
 
-// ── Formulaire produit ──────────────────────────────────────────────────────
-function ProductForm({
-  initial, categories, onClose, onSave, loading,
-}: {
-  initial?: Product | null;
-  categories: { id: number; nom: string }[];
-  onClose: () => void;
-  onSave: (fd: FormData) => void;
-  loading: boolean;
-}) {
-  const [nom, setNom] = useState(initial?.nom ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [prix, setPrix] = useState(String(initial?.prix ?? ''));
-  const [prixPromo, setPrixPromo] = useState(String(initial?.prixPromo ?? ''));
-  const [stock, setStock] = useState(String(initial?.stock ?? '0'));
-  const [categorieId, setCategorieId] = useState(String(initial?.categorieId ?? ''));
-  const [reference, setReference] = useState(initial?.reference ?? '');
-  const [poids, setPoids] = useState(String(initial?.poids ?? ''));
-  const fileRef = useRef<HTMLInputElement>(null);
+type Section = keyof typeof SECTIONS;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const fd = new FormData();
-    fd.append('nom', nom);
-    fd.append('description', description);
-    fd.append('prix', prix);
-    if (prixPromo) fd.append('prixPromo', prixPromo);
-    fd.append('stock', stock);
-    fd.append('categorieId', categorieId);
-    if (reference) fd.append('reference', reference);
-    if (poids) fd.append('poids', poids);
-    const files = fileRef.current?.files;
-    if (files) for (let i = 0; i < files.length; i++) fd.append('images', files[i]);
-    onSave(fd);
-  };
-
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="db-modal-overlay db-modal-overlay--visible" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="db-modal db-modal--visible" style={{ maxWidth: 560, width: '95%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>{initial ? 'Modifier le produit' : 'Nouveau produit'}</span>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', color: 'var(--text2)' }}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ padding: '1.2rem 1.4rem', maxHeight: '65vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div className="db-form-group" style={{ margin: 0 }}>
-              <label className="db-form-label">Nom *</label>
-              <input className="db-form-input" value={nom} onChange={e => setNom(e.target.value)} required placeholder="Nom du produit" />
-            </div>
-            <div className="db-form-group" style={{ margin: 0 }}>
-              <label className="db-form-label">Description</label>
-              <textarea className="db-form-input" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Description…" style={{ resize: 'vertical' }} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Prix (FCFA) *</label>
-                <input className="db-form-input" type="number" value={prix} onChange={e => setPrix(e.target.value)} required min="0" />
-              </div>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Prix promo</label>
-                <input className="db-form-input" type="number" value={prixPromo} onChange={e => setPrixPromo(e.target.value)} min="0" placeholder="Optionnel" />
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Stock *</label>
-                <input className="db-form-input" type="number" value={stock} onChange={e => setStock(e.target.value)} required min="0" />
-              </div>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Catégorie *</label>
-                <select className="db-form-input db-form-select" value={categorieId} onChange={e => setCategorieId(e.target.value)} required>
-                  <option value="">Choisir…</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Référence</label>
-                <input className="db-form-input" value={reference} onChange={e => setReference(e.target.value)} placeholder="REF-001" />
-              </div>
-              <div className="db-form-group" style={{ margin: 0 }}>
-                <label className="db-form-label">Poids (kg)</label>
-                <input className="db-form-input" type="number" value={poids} onChange={e => setPoids(e.target.value)} min="0" step="0.01" placeholder="0.5" />
-              </div>
-            </div>
-            <div className="db-form-group" style={{ margin: 0 }}>
-              <label className="db-form-label">Images {initial ? '(vide = garder les actuelles)' : ''}</label>
-              <input ref={fileRef} type="file" accept="image/*" multiple className="db-form-input" style={{ padding: '0.5rem' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>
-            <button type="button" className="db-btn secondary" onClick={onClose}>Annuler</button>
-            <button type="submit" className="db-btn primary" disabled={loading}>
-              {loading ? 'Enregistrement…' : initial ? 'Mettre à jour' : 'Créer'}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className="relative group">
+      {children}
+      <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+        {label}
+      </span>
     </div>
   );
 }
 
-// ── Modal stock ─────────────────────────────────────────────────────────────
-function StockModal({ product, onClose, onSave, loading }: {
-  product: Product; onClose: () => void; onSave: (n: number) => void; loading: boolean;
-}) {
-  const [val, setVal] = useState(String(product.stock));
-  return (
-    <div className="db-modal-overlay db-modal-overlay--visible" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="db-modal db-modal--visible" style={{ maxWidth: 360, width: '95%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>Modifier le stock</span>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', color: 'var(--text2)' }}>✕</button>
-        </div>
-        <div style={{ padding: '1.2rem 1.4rem' }}>
-          <p style={{ fontSize: '0.87rem', color: 'var(--text2)', marginBottom: '1rem' }}>
-            Produit : <strong>{product.nom}</strong>
-          </p>
-          <div className="db-form-group">
-            <label className="db-form-label">Nouveau stock</label>
-            <input className="db-form-input" type="number" value={val} onChange={e => setVal(e.target.value)} min="0" autoFocus />
-          </div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>
-          <button className="db-btn secondary" onClick={onClose}>Annuler</button>
-          <button className="db-btn primary" disabled={loading} onClick={() => onSave(Number(val))}>
-            {loading ? 'Mise à jour…' : 'Confirmer'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Page principale ─────────────────────────────────────────────────────────
-export const ProductsPage = () => {
+export default function ProductsPage() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
-  const [catFilter, setCatFilter] = useState<number | undefined>();
-  const [activeFilter, setActiveFilter] = useState<boolean | undefined>();
+  const [promoModal, setPromoModal] = useState<{ produit: any; section: Section } | null>(null);
+  const [pct, setPct] = useState('');
+  const [dateDebut, setDateDebut] = useState('');
+  const [dateFin, setDateFin] = useState('');
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Product | null>(null);
-  const [stockTarget, setStockTarget] = useState<Product | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-produits', search, page],
+    queryFn: () => api.getProduits({ search, page, limit: 20 }),
+  });
 
-  const [toast, setToast] = useState({ msg: '', show: false });
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supprimerMutation = useMutation({
+    mutationFn: (id: string) => api.supprimerProduit(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-produits'] });
+      toast.success('Produit supprimé');
+    },
+    onError: () => toast.error('Erreur'),
+  });
 
-  const showToast = (msg: string) => {
-    setToast({ msg, show: true });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2800);
-  };
+  const promoMutation = useMutation({
+    mutationFn: ({ id, data }: any) => api.creerPromo(id, data),
+    onSuccess: () => {
+      setPromoModal(null);
+      toast.success('Promotion créée');
+    },
+    onError: () => toast.error('Erreur'),
+  });
 
-  const { data, isLoading, isError } = useProducts({ page, limit: 10, search, categorieId: catFilter, isActive: activeFilter });
-  const { data: cats } = useCategories();
-  const createMut = useCreateProduct();
-  const updateMut = useUpdateProduct();
-  const deleteMut = useDeleteProduct();
-  const toggleVis = useToggleVisibilite();
-  const toggleFeat = useToggleFeatured();
-  const stockMut = useUpdateStock();
+  const produits = data?.produits || [];
+  const pagination = data?.pagination;
+  const prixActuel = promoModal?.produit?.prix || 0;
+  const prixPromo = pct
+    ? parseFloat((prixActuel * (1 - parseFloat(pct) / 100)).toFixed(2))
+    : 0;
 
-  const rawData = data as any;
-  const products = rawData?.rows ?? [];
-  const totalPages = rawData?.totalPages ?? 1;
-  const categories = (cats as any) ?? [];
-
-  const openCreate = () => { setEditTarget(null); setFormOpen(true); };
-  const openEdit = (p: Product) => { setEditTarget(p); setFormOpen(true); };
-
-  const handleCreate = (fd: FormData) => {
-    createMut.mutate(fd, {
-      onSuccess: () => { setFormOpen(false); showToast('Produit créé avec succès'); },
+  const handlePromoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoModal) return;
+    promoMutation.mutate({
+      id: promoModal.produit.id,
+      data: {
+        section: promoModal.section,
+        pourcentageReduction: parseFloat(pct),
+        dateDebut,
+        dateFin,
+      },
     });
   };
 
-  const handleUpdate = (fd: FormData) => {
-    if (!editTarget) return;
-    updateMut.mutate({ id: editTarget.id, data: fd }, {
-      onSuccess: () => { setEditTarget(null); setFormOpen(false); showToast('Produit mis à jour'); },
-    });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    deleteMut.mutate(deleteTarget.id, {
-      onSuccess: () => { setDeleteTarget(null); showToast('Produit supprimé'); },
-    });
-  };
-
-  const handleStock = (quantite: number) => {
-    if (!stockTarget) return;
-    stockMut.mutate({ id: stockTarget.id, quantite }, {
-      onSuccess: () => { setStockTarget(null); showToast('Stock mis à jour'); },
-    });
+  const openPromo = (produit: any, section: Section) => {
+    setPromoModal({ produit, section });
+    setPct('');
+    setDateDebut('');
+    setDateFin('');
   };
 
   return (
-    <div style={{ padding: '1.6rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '0.6rem' }}>
-        <div>
-          <div style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--black)' }}>Produits</div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text3)', marginTop: 2 }}>
-            {data?.count ?? 0} produit{(data?.count ?? 0) > 1 ? 's' : ''} au total
-          </div>
-        </div>
-        <button className="db-btn primary" onClick={openCreate}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 14, height: 14 }}>
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Nouveau produit
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Produits</h1>
+        <button
+          onClick={() => navigate('/boutique/produits/nouveau')}
+          className="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-600"
+        >
+          + Nouveau produit
         </button>
       </div>
 
-      {/* Filtres */}
-      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={(e) => { e.preventDefault(); setSearch(searchInput); setPage(1); }} style={{ display: 'flex', gap: '0.4rem' }}>
-          <div className="db-search-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input className="db-search-input" placeholder="Rechercher…" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-          </div>
-          <button type="submit" className="db-btn primary" style={{ padding: '0.42rem 0.9rem', fontSize: '0.85rem' }}>OK</button>
-        </form>
-
-        <select
-          className="db-form-input db-form-select"
-          style={{ width: 'auto', padding: '0.42rem 2rem 0.42rem 0.8rem', fontSize: '0.85rem' }}
-          value={catFilter ?? ''}
-          onChange={e => { setCatFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
-        >
-          <option value="">Toutes catégories</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-        </select>
-
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          {[{ label: 'Tous', val: undefined }, { label: 'Actifs', val: true }, { label: 'Inactifs', val: false }].map(f => (
-            <button key={String(f.val)} className={`db-chip${activeFilter === f.val ? ' active' : ''}`}
-              onClick={() => { setActiveFilter(f.val as any); setPage(1); }}>
-              {f.label}
-            </button>
-          ))}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-4 border-b border-gray-100">
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Rechercher un produit…"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+          />
         </div>
-      </div>
 
-      {/* Tableau */}
-      <div className="db-card">
         {isLoading ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>Chargement…</div>
-        ) : isError ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--red)' }}>Erreur lors du chargement.</div>
-        ) : products.length === 0 ? (
-          <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text3)' }}>Aucun produit trouvé.</div>
+          <div className="p-8 text-center text-gray-400">Chargement…</div>
         ) : (
-          <div className="db-table-wrap">
-            <table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Produit</th>
-                  <th>Catégorie</th>
-                  <th>Prix</th>
-                  <th>Stock</th>
-                  <th>Statut</th>
-                  <th>Vedette</th>
-                  <th>Actions</th>
+                <tr className="border-b border-gray-100 text-left">
+                  <th className="p-4 font-medium text-gray-500">Produit</th>
+                  <th className="p-4 font-medium text-gray-500">Rayon</th>
+                  <th className="p-4 font-medium text-gray-500">Prix</th>
+                  <th className="p-4 font-medium text-gray-500">Stock</th>
+                  <th className="p-4 font-medium text-gray-500">Statut</th>
+                  <th className="p-4 font-medium text-gray-500 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => {
-                  const img = firstImage(p.images);
-                  return (
-                    <tr key={p.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'var(--gray2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {img
-                              ? <img src={img} alt={p.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 16, height: 16, color: 'var(--text3)' }}>
-                                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                                </svg>
-                            }
-                          </div>
-                          <div>
-                            <div className="db-td-bold" style={{ fontSize: '0.87rem' }}>{p.nom}</div>
-                            {p.reference && <div style={{ fontSize: '0.72rem', color: 'var(--text3)' }}>{p.reference}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--text3)', fontSize: '0.84rem' }}>{(p as any).Categorie?.nom ?? '—'}</td>
-                      <td>
-                        <div className="db-td-bold">{fmtFcfa(p.prix)}</div>
-                        {p.prixPromo && <div style={{ fontSize: '0.72rem', color: 'var(--green)' }}>{fmtFcfa(p.prixPromo)}</div>}
-                      </td>
-                      <td>
-                        <button onClick={() => setStockTarget(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="Modifier le stock">
-                          <span className={`badge ${p.stock === 0 ? 'br' : p.stock <= 5 ? 'bgo' : 'bb'}`}>
-                            {p.stock === 0 ? 'Rupture' : `${p.stock}`}
-                          </span>
-                        </button>
-                      </td>
-                      <td>
-                        <button onClick={() => toggleVis.mutate(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                          <span className={`badge ${p.isActive ? 'bg' : 'bx'}`}>{p.isActive ? 'Actif' : 'Inactif'}</span>
-                        </button>
-                      </td>
-                      <td>
-                        <button onClick={() => toggleFeat.mutate(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                          <svg viewBox="0 0 24 24" fill={p.isFeatured ? '#eab308' : 'none'} stroke={p.isFeatured ? '#eab308' : '#aaa'} strokeWidth={2} style={{ width: 18, height: 18 }}>
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                          </svg>
-                        </button>
-                      </td>
-                      <td>
-                        <div className="db-actions">
-                          <button className="db-btn-ghost" onClick={() => openEdit(p)}>Modifier</button>
-                          <button className="db-btn-danger" onClick={() => setDeleteTarget(p)}>Supprimer</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {produits.map((p: any) => (
+                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        {p.images?.[0] ? (
+                          <img
+                            src={p.images[0]}
+                            className="w-10 h-10 rounded-lg object-cover"
+                            alt=""
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gray-100" />
+                        )}
+                        <span className="font-medium">{p.nom}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-gray-500">
+                      {p.rayon?.nom || '—'}
+                      {p.sousRayon ? ` / ${p.sousRayon.nom}` : ''}
+                    </td>
+                    <td className="p-4 font-medium">
+                      {p.prix?.toLocaleString('fr-FR')} FCFA
+                    </td>
+                    <td className="p-4 text-center">{p.stock}</td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          p.statutValidation === 'valide'
+                            ? 'bg-green-100 text-green-700'
+                            : p.statutValidation === 'en_attente'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {p.statutValidation}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-1">
+                        <Tooltip label="Modifier">
+                          <button
+                            onClick={() => navigate(`/boutique/produits/${p.id}/modifier`)}
+                            className="p-1.5 rounded hover:bg-yellow-50 text-gray-500 hover:text-yellow-600 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="Supprimer">
+                          <button
+                            onClick={() => {
+                              if (confirm('Supprimer ce produit ?')) supprimerMutation.mutate(p.id);
+                            }}
+                            className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="Promo du moment">
+                          <button
+                            onClick={() => openPromo(p, 'nos_promos_du_moment')}
+                            className="p-1.5 rounded hover:bg-orange-50 text-gray-500 hover:text-orange-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="À ne pas rater">
+                          <button
+                            onClick={() => openPromo(p, 'a_ne_pas_rater')}
+                            className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="Promo à venir">
+                          <button
+                            onClick={() => openPromo(p, 'nos_promos_a_venir')}
+                            className="p-1.5 rounded hover:bg-blue-50 text-gray-500 hover:text-blue-500 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {produits.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                      Aucun produit trouvé
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
-            <button className="db-btn-ghost" disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Précédent</button>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text3)' }}>Page {page} / {totalPages}</span>
-            <button className="db-btn-ghost" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Suivant →</button>
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex justify-center p-4 gap-2">
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded text-sm ${
+                  page === p ? 'bg-yellow-500 text-white' : 'hover:bg-gray-100'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Modals */}
-      {formOpen && (
-        <ProductForm
-          initial={editTarget}
-          categories={categories}
-          onClose={() => { setFormOpen(false); setEditTarget(null); }}
-          onSave={editTarget ? handleUpdate : handleCreate}
-          loading={createMut.isPending || updateMut.isPending}
-        />
-      )}
-
-      {stockTarget && (
-        <StockModal
-          product={stockTarget}
-          onClose={() => setStockTarget(null)}
-          onSave={handleStock}
-          loading={stockMut.isPending}
-        />
-      )}
-
-      {deleteTarget && (
-        <div className="db-modal-overlay db-modal-overlay--visible" onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
-          <div className="db-modal db-modal--visible" style={{ maxWidth: 380, width: '95%' }}>
-            <div style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>Confirmer la suppression</div>
-            <div style={{ padding: '1.2rem 1.4rem', fontSize: '0.9rem', color: 'var(--text2)' }}>
-              Supprimer <strong>"{deleteTarget.nom}"</strong> ? Cette action est irréversible.
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>
-              <button className="db-btn secondary" onClick={() => setDeleteTarget(null)}>Annuler</button>
-              <button className="db-btn confirm" disabled={deleteMut.isPending} onClick={handleDelete}>
-                {deleteMut.isPending ? 'Suppression…' : 'Supprimer'}
-              </button>
-            </div>
+      {/* Modal Promotion */}
+      {promoModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setPromoModal(null)}
+        >
+          <div
+            className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold mb-1">
+              {SECTIONS[promoModal.section].title}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">{promoModal.produit.nom}</p>
+            <form onSubmit={handlePromoSubmit} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Prix actuel</label>
+                <input
+                  readOnly
+                  value={`${prixActuel.toLocaleString('fr-FR')} FCFA`}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Réduction (%)</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={pct}
+                  onChange={(e) => setPct(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                  placeholder="Ex: 20"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Prix promotionnel</label>
+                <input
+                  readOnly
+                  value={pct ? `${prixPromo.toLocaleString('fr-FR')} FCFA` : '—'}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Date début</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={dateDebut}
+                    onChange={(e) => setDateDebut(e.target.value)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Date fin</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={dateFin}
+                    onChange={(e) => setDateFin(e.target.value)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPromoModal(null)}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={promoMutation.isPending}
+                  className="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-60"
+                >
+                  Valider la promotion
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-
-      <div className={`db-toast${toast.show ? ' show' : ''}`}>
-        <div className="db-toast-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-        {toast.msg}
-      </div>
     </div>
   );
-};
+}

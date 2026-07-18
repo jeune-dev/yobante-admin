@@ -145,7 +145,7 @@ export const LoginPage = () => {
         <div className="app-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="app-modal" onClick={(e) => e.stopPropagation()}>
             <div className="app-modal-head">
-              <img src={LOGO} alt="Yobante" className="app-modal-logo" />
+              <img src={PICTO} alt="Yobante" className="app-modal-logo" />
               <h3>Choisissez votre espace</h3>
               <p>Vous avez accès aux deux plateformes. Laquelle voulez-vous gérer ?</p>
             </div>
