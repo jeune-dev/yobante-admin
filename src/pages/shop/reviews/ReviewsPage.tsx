@@ -102,11 +102,11 @@ export default function ReviewsPage() {
                   <tr key={r.id}>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: '0.87rem' }}>
-                        {r.User?.nom} {r.User?.prenom}
+                        {r.user?.nom} {r.user?.prenom}
                       </div>
                     </td>
                     <td style={{ fontSize: '0.84rem', color: 'var(--text2)' }}>
-                      {r.Produit?.nom ?? '—'}
+                      {r.produit?.nom ?? '—'}
                     </td>
                     <td><Stars note={r.note} /></td>
                     <td style={{ maxWidth: 260 }}>
@@ -164,7 +164,7 @@ export default function ReviewsPage() {
               Confirmer la suppression
             </div>
             <div style={{ padding: '1.2rem 1.4rem', fontSize: '0.9rem', color: 'var(--text2)' }}>
-              Supprimer l'avis de <strong>{deleteTarget.User?.nom} {deleteTarget.User?.prenom}</strong> sur <strong>{deleteTarget.Produit?.nom}</strong> ?
+              Supprimer l'avis de <strong>{deleteTarget.user?.nom} {deleteTarget.user?.prenom}</strong> sur <strong>{deleteTarget.produit?.nom}</strong> ?
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>
               <button className="db-btn secondary" onClick={() => setDeleteTarget(null)}>Annuler</button>

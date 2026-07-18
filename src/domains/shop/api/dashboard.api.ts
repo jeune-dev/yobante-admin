@@ -13,4 +13,22 @@ export const dashboardApi = {
 
   getClientsActifs: (limit = 5): Promise<{ data: { clients: ClientActif[] } }> =>
     shopClient.get('/admin/dashboard/clients-actifs', { params: { limit } }),
+
+  getRevenus: (periode?: string): Promise<any> =>
+    shopClient.get('/admin/dashboard/revenus', { params: { periode } }),
+
+  getStockAlertes: (limit = 5): Promise<any> =>
+    shopClient.get('/admin/dashboard/stock-alertes', { params: { limit } }),
+
+  getOverview: (): Promise<any> => shopClient.get('/admin/dashboard/overview'),
+
+  getCommandesParStatut: (): Promise<any> =>
+    shopClient.get('/admin/dashboard/commandes-statut'),
+
+  getCommandesRecentes: (limit = 5): Promise<any> =>
+    shopClient.get('/admin/dashboard/commandes-recentes', { params: { limit } }),
+
+  getStatsVendeurs: (): Promise<any> => shopClient.get('/admin/dashboard/stats-vendeurs'),
+
+  getKpiComplet: (): Promise<any> => shopClient.get('/admin/dashboard/kpi-complet'),
 };

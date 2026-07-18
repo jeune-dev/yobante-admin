@@ -21,7 +21,7 @@ export const useCreateProduct = () => {
 export const useUpdateProduct = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: FormData }) => productsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: FormData }) => productsApi.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };
@@ -29,7 +29,7 @@ export const useUpdateProduct = () => {
 export const useDeleteProduct = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => productsApi.remove(id),
+    mutationFn: (id: string) => productsApi.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };
@@ -37,7 +37,7 @@ export const useDeleteProduct = () => {
 export const useToggleVisibilite = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => productsApi.toggleVisibilite(id),
+    mutationFn: (id: string) => productsApi.toggleVisibilite(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };
@@ -45,7 +45,7 @@ export const useToggleVisibilite = () => {
 export const useToggleFeatured = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => productsApi.toggleFeatured(id),
+    mutationFn: (id: string) => productsApi.toggleFeatured(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };
@@ -53,7 +53,7 @@ export const useToggleFeatured = () => {
 export const useUpdateStock = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, quantite }: { id: number; quantite: number }) => productsApi.updateStock(id, quantite),
+    mutationFn: ({ id, quantite }: { id: string; quantite: number }) => productsApi.updateStock(id, quantite),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };

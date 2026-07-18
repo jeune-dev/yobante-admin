@@ -13,7 +13,7 @@ export const useReviews = (filters: ReviewFilters = {}) =>
 export const useToggleApprove = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => reviewsApi.approuver(id),
+    mutationFn: (id: string) => reviewsApi.approuver(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };
@@ -21,7 +21,7 @@ export const useToggleApprove = () => {
 export const useDeleteReview = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => reviewsApi.remove(id),
+    mutationFn: (id: string) => reviewsApi.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };

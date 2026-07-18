@@ -19,10 +19,6 @@ export const useToggleUserActive = () => {
   });
 };
 
-export const useDeleteUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => usersApi.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
-  });
-};
+// Pas de suppression de client : le backend n'expose aucune route pour cela,
+// et supprimer un compte porteur de commandes casserait leur historique.
+// La désactivation ci-dessus est l'opération prévue.

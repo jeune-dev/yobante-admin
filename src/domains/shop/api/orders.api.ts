@@ -17,6 +17,25 @@ export const ordersApi = {
   getById: (id: string): Promise<any> =>
     shopClient.get(`/admin/commandes/${id}`),
 
-  updateStatut: (id: string, statut: StatutCommande, noteAdmin?: string): Promise<any> =>
-    shopClient.patch(`/admin/commandes/${id}/statut`, { statut, noteAdmin }),
+  // Le backend n'expose pas de route générique /statut : chaque transition a
+  // la sienne, ce qui évite d'accepter un enchaînement d'états incohérent.
+  valider: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/valider`),
+
+  rejeter: (id: string, raison = 'Non précisée'): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/rejeter`, { raison }),
+
+  preparation: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/preparation`),
+
+  expedier: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/expedier`),
+
+  livrer: (id: string): Promise<any> =>
+    shopClient.patch(`/admin/commandes/${id}/livrer`),
+
+  getKpi: (): Promise<any> => shopClient.get('/admin/commandes/kpi'),
+
+  exportCsv: (filters?: OrderFilters): Promise<any> =>
+    shopClient.get('/admin/commandes/export', { params: filters }),
 };

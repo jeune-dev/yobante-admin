@@ -1,5 +1,19 @@
 ﻿import shopClient from '@/infrastructure/http/shop.client';
 
+/** Avis tel que renvoyé par l'administration. */
+export interface Review {
+  id: string;
+  produitId: string;
+  userId: string;
+  note: number;
+  commentaire?: string | null;
+  isApproved?: boolean;
+  // Toujours présent : les modèles sont horodatés côté backend.
+  createdAt: string;
+  produit?: Record<string, any>;
+  user?: Record<string, any>;
+}
+
 export interface ReviewFilters {
   isApproved?: boolean;
   produitId?: string;

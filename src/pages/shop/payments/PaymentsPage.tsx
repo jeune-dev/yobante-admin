@@ -126,11 +126,12 @@ export default function PaymentsPage() {
                         ) : <span style={{ color: 'var(--text3)' }}>—</span>}
                       </td>
                       <td style={{ fontSize: '0.84rem' }}>
-                        {METHODES[p.methodePaiement] ?? p.methodePaiement ?? '—'}
+                        {/* Le backend expose `methode`, pas `methodePaiement`. */}
+                        {METHODES[p.methode] ?? p.methode ?? '—'}
                       </td>
-                      <td className="db-td-bold">{fmtFcfa(p.montant)}</td>
+                      <td className="db-td-bold">{fmtFcfa(Number(p.montant))}</td>
                       <td style={{ fontSize: '0.82rem', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                        {p.payeAt ? fmtDate(p.payeAt) : fmtDate(p.createdAt)}
+                        {p.payeAt ? fmtDate(p.payeAt) : p.createdAt ? fmtDate(p.createdAt) : '—'}
                       </td>
                       <td><span className={`badge ${s?.cls}`}>{s?.label ?? p.statut}</span></td>
                       <td>
@@ -165,7 +166,7 @@ export default function PaymentsPage() {
               Confirmer le remboursement
             </div>
             <div style={{ padding: '1.2rem 1.4rem', fontSize: '0.9rem', color: 'var(--text2)' }}>
-              Rembourser <strong>{fmtFcfa(refundTarget.montant)}</strong> pour la commande{' '}
+              Rembourser <strong>{fmtFcfa(Number(refundTarget.montant))}</strong> pour la commande{' '}
               <strong>#{refundTarget.commandeId?.slice(0, 8).toUpperCase()}</strong> ?
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>

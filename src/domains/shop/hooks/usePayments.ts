@@ -13,7 +13,7 @@ export const usePayments = (filters: PaymentFilters = {}) =>
 export const useRembourser = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => paymentsApi.rembourser(id),
+    mutationFn: (id: string) => paymentsApi.rembourser(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY] }),
   });
 };

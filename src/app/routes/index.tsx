@@ -4,6 +4,8 @@ import ShopLayout from '@/layouts/ShopLayout';
 import ShipmentLayout from '@/layouts/ShipmentLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import ShopDashboard from '@/pages/shop/dashboard/DashboardPage';
+import AccueilPage from '@/pages/shop/accueil/AccueilPage';
+import ProfilPage from '@/pages/shop/profil/ProfilPage';
 import RayonsPage from '@/pages/shop/rayons/RayonsPage';
 import ProductsPage from '@/pages/shop/products/ProductsPage';
 import ProductCreatePage from '@/pages/shop/products/ProductCreatePage';
@@ -49,6 +51,8 @@ export const router = createBrowserRouter(
               children: [
                 { index: true, element: <Navigate to="dashboard" replace /> },
                 { path: 'dashboard', element: <ShopDashboard /> },
+              { path: 'accueil', element: <AccueilPage /> },
+              { path: 'profil', element: <ProfilPage /> },
                 { path: 'rayons', element: <RayonsPage /> },
                 { path: 'produits', element: <ProductsPage /> },
                 { path: 'produits/nouveau', element: <ProductCreatePage /> },

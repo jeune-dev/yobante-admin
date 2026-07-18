@@ -1,5 +1,21 @@
 ﻿import shopClient from '@/infrastructure/http/shop.client';
 
+/** Paiement tel que renvoyé par l'administration. */
+export interface Payment {
+  id: string;
+  commandeId: string;
+  userId: string;
+  montant: number | string;
+  methode: 'wave' | 'orange_money' | 'carte' | 'cash_livraison';
+  statut: 'en_attente' | 'succes' | 'echoue' | 'rembourse';
+  transactionId?: string | null;
+  fournisseur?: string | null;
+  payeAt?: string | null;
+  createdAt?: string;
+  commande?: Record<string, any>;
+  user?: Record<string, any>;
+}
+
 export interface PaymentFilters {
   statut?: string;
   methode?: string;

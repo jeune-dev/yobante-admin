@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useUsers, useToggleUserActive, useDeleteUser } from '@/domains/shop/hooks/useUsers';
+import { useUsers, useToggleUserActive } from '@/domains/shop/hooks/useUsers';
 import { ShopUser } from '@/domains/shop/api/users.api';
 
 function fmtDate(iso: string) {
@@ -15,7 +15,6 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState<boolean | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<ShopUser | null>(null);
 
   const [toast, setToast] = useState({ msg: '', show: false });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -28,7 +27,6 @@ export default function UsersPage() {
 
   const { data, isLoading, isError } = useUsers({ page, limit: 15, search, isActive: activeFilter });
   const toggleMut = useToggleUserActive();
-  const deleteMut = useDeleteUser();
 
   const users = (data as any)?.rows ?? [];
   const totalPages = (data as any)?.totalPages ?? 1;
@@ -37,13 +35,6 @@ export default function UsersPage() {
   const handleToggle = (u: ShopUser) => {
     toggleMut.mutate({ id: u.id, isActive: u.isActive }, {
       onSuccess: () => showToast(u.isActive ? 'Compte bloqué' : 'Compte activé'),
-    });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    deleteMut.mutate(deleteTarget.id, {
-      onSuccess: () => { setDeleteTarget(null); showToast('Client supprimé'); },
     });
   };
 
@@ -151,9 +142,6 @@ export default function UsersPage() {
                         >
                           {u.isActive ? 'Bloquer' : 'Activer'}
                         </button>
-                        <button className="db-btn-danger" onClick={() => setDeleteTarget(u)}>
-                          Supprimer
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -171,26 +159,6 @@ export default function UsersPage() {
           </div>
         )}
       </div>
-
-      {/* Confirm suppression */}
-      {deleteTarget && (
-        <div className="db-modal-overlay db-modal-overlay--visible" onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
-          <div className="db-modal db-modal--visible" style={{ maxWidth: 380, width: '95%' }}>
-            <div style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>
-              Confirmer la suppression
-            </div>
-            <div style={{ padding: '1.2rem 1.4rem', fontSize: '0.9rem', color: 'var(--text2)' }}>
-              Supprimer le compte de <strong>{deleteTarget.nom} {deleteTarget.prenom}</strong> ? Cette action est irréversible.
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', padding: '1rem 1.4rem', borderTop: '1px solid var(--border)' }}>
-              <button className="db-btn secondary" onClick={() => setDeleteTarget(null)}>Annuler</button>
-              <button className="db-btn confirm" disabled={deleteMut.isPending} onClick={handleDelete}>
-                {deleteMut.isPending ? 'Suppression…' : 'Supprimer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className={`db-toast${toast.show ? ' show' : ''}`}>
         <div className="db-toast-icon">

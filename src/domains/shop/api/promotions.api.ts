@@ -18,8 +18,10 @@ export const promotionsApi = {
   getById: (id: string): Promise<any> =>
     shopClient.get(`/admin/promotions/${id}`),
 
+  // La route backend est /sections, pas /par-section : l'ancien chemin
+  // tombait sur /:id et repartait en erreur.
   getParSection: (): Promise<any> =>
-    shopClient.get('/admin/promotions/par-section'),
+    shopClient.get('/admin/promotions/sections'),
 
   create: (data: CreatePromotionData): Promise<any> =>
     shopClient.post('/admin/promotions', data),
