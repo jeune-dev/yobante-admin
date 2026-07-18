@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import shopClient from '@/infrastructure/http/shop.client';
 import { toast } from 'react-toastify';
@@ -33,17 +33,24 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
 
 export default function ProductsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [filterRayonId, setFilterRayonId] = useState(searchParams.get('rayonId') || '');
   const [promoModal, setPromoModal] = useState<{ produit: any; section: Section } | null>(null);
   const [pct, setPct] = useState('');
   const [dateDebut, setDateDebut] = useState('');
   const [dateFin, setDateFin] = useState('');
 
+  useEffect(() => {
+    const id = searchParams.get('rayonId');
+    if (id) setFilterRayonId(id);
+  }, [searchParams]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-produits', search, page],
-    queryFn: () => api.getProduits({ search, page, limit: 20 }),
+    queryKey: ['admin-produits', search, page, filterRayonId],
+    queryFn: () => api.getProduits({ search, page, limit: 20, rayonId: filterRayonId || undefined }),
   });
 
   const supprimerMutation = useMutation({

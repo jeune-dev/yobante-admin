@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import shopClient from '@/infrastructure/http/shop.client';
 import { toast } from 'react-toastify';
 
@@ -29,6 +30,7 @@ export default function RayonsPage() {
   const [editSr, setEditSr] = useState<any>(null);
   const [srForm, setSrForm] = useState({ nom: '', description: '' });
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: rayonsData, isLoading } = useQuery({
     queryKey: ['rayons', search, page],
@@ -193,6 +195,15 @@ export default function RayonsPage() {
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => navigate(`/boutique/produits?rayonId=${r.id}`)}
+                          title="Voir les produits"
+                          className="p-1.5 hover:bg-blue-50 rounded text-gray-500 hover:text-blue-600"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        </button>
                         <button
                           onClick={() => openEdit(r)}
                           title="Modifier"
