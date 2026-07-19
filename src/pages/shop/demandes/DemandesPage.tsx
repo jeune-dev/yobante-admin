@@ -6,8 +6,7 @@ import { toast } from 'react-toastify';
 const api = {
   getDemandes: (p: any) =>
     shopClient
-      .get('/admin/produits', { params: { ...p, statutValidation: 'en_attente' } })
-      .then((r: any) => r.data),
+      .get('/admin/produits', { params: { ...p, statutValidation: 'en_attente' } }),
   valider: (id: string) => shopClient.patch(`/admin/produits/${id}/valider`),
   rejeter: (id: string, motif: string) =>
     shopClient.patch(`/admin/produits/${id}/rejeter`, { motif }),

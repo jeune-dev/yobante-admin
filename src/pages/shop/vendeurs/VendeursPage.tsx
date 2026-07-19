@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 const api = {
   getVendeurs: (p: any) =>
-    shopClient.get('/admin/vendeurs', { params: p }).then((r: any) => r.data),
+    shopClient.get('/admin/vendeurs', { params: p }),
   creerVendeur: (data: any) => shopClient.post('/admin/vendeurs', data),
   validerStep1: (id: string) => shopClient.patch(`/admin/vendeurs/${id}/valider-step1`),
   validerStep2: (id: string) => shopClient.patch(`/admin/vendeurs/${id}/valider-step2`),

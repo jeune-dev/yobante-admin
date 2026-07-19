@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import shopClient from '@/infrastructure/http/shop.client';
 
 const api = {
-  getKpi: () => shopClient.get('/admin/dashboard/kpi-complet').then((r: any) => r.data),
+  getKpi: () => shopClient.get('/admin/dashboard/kpi-complet'),
 };
 
 function KpiCard({ label, value, sub, color = 'bg-white' }: { label: string; value: any; sub?: string; color?: string }) {

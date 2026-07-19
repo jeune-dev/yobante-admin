@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 const api = {
   getCommande: (id: string) =>
-    shopClient.get(`/admin/commandes/${id}`).then((r: any) => r.data?.commande || r.data),
+    shopClient.get(`/admin/commandes/${id}`).then((r: any) => r.commande ?? r),
   valider: (id: string) => shopClient.patch(`/admin/commandes/${id}/valider`),
   rejeter: (id: string) => shopClient.patch(`/admin/commandes/${id}/rejeter`),
 };

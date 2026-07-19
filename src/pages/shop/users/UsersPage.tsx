@@ -28,9 +28,10 @@ export default function UsersPage() {
   const { data, isLoading, isError } = useUsers({ page, limit: 15, search, isActive: activeFilter });
   const toggleMut = useToggleUserActive();
 
-  const users = (data as any)?.rows ?? [];
-  const totalPages = (data as any)?.totalPages ?? 1;
-  const count = (data as any)?.count ?? 0;
+  // Le backend renvoie { users, pagination: { total, totalPages, page, limit } }.
+  const users = (data as any)?.users ?? [];
+  const totalPages = (data as any)?.pagination?.totalPages ?? 1;
+  const count = (data as any)?.pagination?.total ?? users.length;
 
   const handleToggle = (u: ShopUser) => {
     toggleMut.mutate({ id: u.id, isActive: u.isActive }, {

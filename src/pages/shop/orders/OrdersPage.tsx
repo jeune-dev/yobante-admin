@@ -6,8 +6,8 @@ import { toast } from 'react-toastify';
 
 const api = {
   getCommandes: (p: any) =>
-    shopClient.get('/admin/commandes', { params: p }).then((r: any) => r.data),
-  getKpi: () => shopClient.get('/admin/commandes/kpi').then((r: any) => r.data),
+    shopClient.get('/admin/commandes', { params: p }),
+  getKpi: () => shopClient.get('/admin/commandes/kpi'),
   valider: (id: string) => shopClient.patch(`/admin/commandes/${id}/valider`),
   rejeter: (id: string, motif?: string) =>
     shopClient.patch(`/admin/commandes/${id}/rejeter`, { motif }),

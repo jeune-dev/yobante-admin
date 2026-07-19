@@ -5,12 +5,12 @@ import shopClient from '@/infrastructure/http/shop.client';
 import { toast } from 'react-toastify';
 
 const api = {
-  getRayons: (params?: any) => shopClient.get('/admin/rayons', { params }).then((r: any) => r.data),
+  getRayons: (params?: any) => shopClient.get('/admin/rayons', { params }),
   creerRayon: (data: any) => shopClient.post('/admin/rayons', data),
   modifierRayon: (id: string, data: any) => shopClient.put(`/admin/rayons/${id}`, data),
   archiverRayon: (id: string) => shopClient.patch(`/admin/rayons/${id}/archiver`),
   getSousRayons: (rayonId: string, params?: any) =>
-    shopClient.get(`/admin/rayons/${rayonId}/sous-rayons`, { params }).then((r: any) => r.data),
+    shopClient.get(`/admin/rayons/${rayonId}/sous-rayons`, { params }),
   creerSousRayon: (rayonId: string, data: any) =>
     shopClient.post(`/admin/rayons/${rayonId}/sous-rayons`, data),
   modifierSousRayon: (id: string, data: any) =>

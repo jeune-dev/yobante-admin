@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 
 const api = {
   getProduits: (p: any) =>
-    shopClient.get('/admin/produits', { params: p }).then((r: any) => r.data),
+    shopClient.get('/admin/produits', { params: p }),
   supprimerProduit: (id: string) => shopClient.delete(`/admin/produits/${id}`),
   creerPromo: (produitId: string, data: any) =>
     shopClient.post(`/admin/promotions/produit/${produitId}`, data),

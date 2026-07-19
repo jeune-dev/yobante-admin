@@ -22,16 +22,16 @@ export const SECTIONS = [
 ] as const;
 
 const api = {
-  bannieres: () => shopClient.get('/admin/bannieres').then((r: any) => r.data),
+  bannieres: () => shopClient.get('/admin/bannieres'),
   creerBanniere: (data: FormData) => shopClient.post('/admin/bannieres', data),
   supprimerBanniere: (id: string) => shopClient.delete(`/admin/bannieres/${id}`),
   basculerBanniere: (id: string) => shopClient.patch(`/admin/bannieres/${id}/toggle`),
 
-  blocs: () => shopClient.get('/admin/blocs-promo').then((r: any) => r.data),
+  blocs: () => shopClient.get('/admin/blocs-promo'),
   supprimerBloc: (id: string) => shopClient.delete(`/admin/blocs-promo/${id}`),
   basculerBloc: (id: string) => shopClient.patch(`/admin/blocs-promo/${id}/toggle`),
 
-  promotions: () => shopClient.get('/admin/promotions', { params: { limit: 200 } }).then((r: any) => r.data),
+  promotions: () => shopClient.get('/admin/promotions', { params: { limit: 200 } }),
   supprimerPromotion: (id: string) => shopClient.delete(`/admin/promotions/${id}`),
   basculerPromotion: (id: string) => shopClient.patch(`/admin/promotions/${id}/toggle`),
 };

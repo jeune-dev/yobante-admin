@@ -22,7 +22,7 @@ export default function ProductEditPage() {
   const { data: produit } = useQuery({
     queryKey: ['produit', id],
     queryFn: () =>
-      shopClient.get(`/admin/produits/${id}`).then((r: any) => r.data?.produit || r.data),
+      shopClient.get(`/admin/produits/${id}`).then((r: any) => r.produit ?? r),
     enabled: !!id,
   });
 
@@ -45,7 +45,7 @@ export default function ProductEditPage() {
     queryFn: () =>
       shopClient
         .get('/admin/rayons', { params: { actif: true, limit: 100 } })
-        .then((r: any) => r.data?.rayons || []),
+        .then((r: any) => r.rayons ?? []),
   });
 
   const { data: sousRayonsData } = useQuery({
@@ -53,7 +53,7 @@ export default function ProductEditPage() {
     queryFn: () =>
       shopClient
         .get(`/admin/rayons/${rayonId}/sous-rayons`)
-        .then((r: any) => r.data?.sousRayons || []),
+        .then((r: any) => r.sousRayons ?? []),
     enabled: !!rayonId,
   });
 

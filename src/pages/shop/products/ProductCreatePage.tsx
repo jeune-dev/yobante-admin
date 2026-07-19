@@ -22,7 +22,7 @@ export default function ProductCreatePage() {
     queryFn: () =>
       shopClient
         .get('/admin/rayons', { params: { actif: true, limit: 100 } })
-        .then((r: any) => r.data?.rayons || []),
+        .then((r: any) => r.rayons ?? []),
   });
 
   const { data: sousRayonsData } = useQuery({
@@ -30,7 +30,7 @@ export default function ProductCreatePage() {
     queryFn: () =>
       shopClient
         .get(`/admin/rayons/${rayonId}/sous-rayons`)
-        .then((r: any) => r.data?.sousRayons || []),
+        .then((r: any) => r.sousRayons ?? []),
     enabled: !!rayonId,
   });
 

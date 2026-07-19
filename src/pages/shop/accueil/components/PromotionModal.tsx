@@ -41,7 +41,8 @@ export default function PromotionModal({ section, promotion, onFermer, onEnregis
         const r: any = await shopClient.get('/admin/produits', {
           params: { search: recherche, limit: 8 },
         });
-        setResultats(r.data?.produits ?? []);
+        // Le client déballe l'enveloppe : `r` est déjà la charge utile.
+        setResultats(r.produits ?? []);
       } catch {
         setResultats([]);
       }

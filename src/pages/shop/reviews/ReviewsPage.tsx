@@ -36,9 +36,10 @@ export default function ReviewsPage() {
   const approveMut = useToggleApprove();
   const deleteMut = useDeleteReview();
 
-  const reviews = (data as any)?.rows ?? [];
-  const totalPages = (data as any)?.totalPages ?? 1;
-  const count = (data as any)?.count ?? 0;
+  // Le backend renvoie { avis, pagination: { total, totalPages, page, limit } }.
+  const reviews = (data as any)?.avis ?? [];
+  const totalPages = (data as any)?.pagination?.totalPages ?? 1;
+  const count = (data as any)?.pagination?.total ?? reviews.length;
 
   const handleToggle = (r: Review) => {
     approveMut.mutate(r.id, {

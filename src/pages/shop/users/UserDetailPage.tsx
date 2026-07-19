@@ -9,7 +9,7 @@ export default function UserDetailPage() {
   const { data: user, isLoading } = useQuery({
     queryKey: ['user', id],
     queryFn: () =>
-      shopClient.get(`/admin/users/${id}`).then((r: any) => r.data?.user || r.data),
+      shopClient.get(`/admin/users/${id}`).then((r: any) => r.user ?? r),
     enabled: !!id,
   });
 

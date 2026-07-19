@@ -1,16 +1,11 @@
 // domains/shop/api/admin.api.ts
 // Appels API Boutique / Espace Admin — wired sur /api/v1/admin/*
-// shopClient (interceptor) renvoie déjà l'enveloppe { success, message, data }.
-// Chaque fonction retourne le contenu de `data`.
+// shopClient déballe déjà l'enveloppe { success, message, data } : chaque appel
+// résout directement sur la charge utile.
 import shopClient from '@/infrastructure/http/shop.client';
 
-// L'interceptor renvoie l'enveloppe ; on la type librement.
-type Envelope<T = any> = { success?: boolean; message?: string; data?: T };
-
-const unwrap = async <T = any>(p: Promise<unknown>): Promise<T> => {
-  const env = (await p) as unknown as Envelope<T>;
-  return (env?.data ?? env) as T;
-};
+// Conservé pour homogénéiser le typage des appels de ce module.
+const unwrap = async <T = any>(p: Promise<unknown>): Promise<T> => (await p) as T;
 
 // Pour un envoi multipart : on retire le Content-Type json par défaut du client
 // afin qu'axios pose lui-même le boundary multipart/form-data.

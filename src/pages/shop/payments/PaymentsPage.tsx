@@ -35,9 +35,10 @@ export default function PaymentsPage() {
   const { data, isLoading, isError } = usePayments({ page, limit: 15, statut: statutFilter || undefined });
   const rembourserMut = useRembourser();
 
-  const payments = (data as any)?.rows ?? [];
-  const totalPages = (data as any)?.totalPages ?? 1;
-  const count = (data as any)?.count ?? 0;
+  // Le backend renvoie { paiements, pagination: { total, totalPages, page, limit } }.
+  const payments = (data as any)?.paiements ?? [];
+  const totalPages = (data as any)?.pagination?.totalPages ?? 1;
+  const count = (data as any)?.pagination?.total ?? payments.length;
 
   const totalSucces = payments
     .filter((p: Payment) => p.statut === 'succes')

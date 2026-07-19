@@ -5,7 +5,7 @@ import shopClient from '@/infrastructure/http/shop.client';
 import Icon from '@/shared/components/dashboard/Icon';
 
 const api = {
-  profil: () => shopClient.get('/profile').then((r: any) => r.data),
+  profil: () => shopClient.get('/profile'),
   modifier: (data: Record<string, any>) => shopClient.put('/profile', data),
   changerMotDePasse: (data: Record<string, any>) =>
     shopClient.post('/auth/change-password', data),

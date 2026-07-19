@@ -4,7 +4,7 @@ import shopClient from '@/infrastructure/http/shop.client';
 import { toast } from 'react-toastify';
 
 const api = {
-  getBannieres: () => shopClient.get('/admin/bannieres').then((r: any) => r.data),
+  getBannieres: () => shopClient.get('/admin/bannieres'),
   creerBanniere: (data: FormData) => shopClient.post('/admin/bannieres', data),
   modifierBanniere: (id: string, data: FormData) => shopClient.put(`/admin/bannieres/${id}`, data),
   supprimerBanniere: (id: string) => shopClient.delete(`/admin/bannieres/${id}`),
@@ -13,7 +13,7 @@ const api = {
   searchProduits: (search: string) =>
     shopClient
       .get('/admin/produits', { params: { search, limit: 10 } })
-      .then((r: any) => r.data?.produits || []),
+      .then((r: any) => r.produits ?? []),
 };
 
 export default function BannieresPage() {
