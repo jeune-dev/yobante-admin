@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import shopClient from '@/infrastructure/http/shop.client';
 import { toast } from 'react-toastify';
 import Icon from '@/shared/components/dashboard/Icon';
 import SousSectionModal from './components/SousSectionModal';
 import PromotionModal from './components/PromotionModal';
+import BanniereModal from './components/BanniereModal';
 
 /**
  * Gestion de la page d'accueil de l'application client.
@@ -45,6 +47,8 @@ export default function AccueilPage() {
   const [sectionCible, setSectionCible] = useState<string | null>(null);
   const [promoEnEdition, setPromoEnEdition] = useState<any>(null);
   const [sectionPromo, setSectionPromo] = useState<string | null>(null);
+  const [modaleBanniere, setModaleBanniere] = useState(false);
+  const [banniereEnEdition, setBanniereEnEdition] = useState<any>(null);
 
   const bannieres = useQuery({ queryKey: ['accueil', 'bannieres'], queryFn: api.bannieres });
   const blocs = useQuery({ queryKey: ['accueil', 'blocs'], queryFn: api.blocs });
@@ -59,7 +63,9 @@ export default function AccueilPage() {
         rafraichir(cle);
         toast.success(message);
       },
-      onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Action impossible'),
+      // Le client rejette un objet normalisé { status, message } : lire
+      // e.response.data.message ne donnerait jamais rien.
+      onError: (e: any) => toast.error(e?.message ?? 'Action impossible'),
     });
 
   const supprBanniere = mutation(api.supprimerBanniere, 'bannieres', 'Bannière supprimée');
@@ -108,12 +114,15 @@ export default function AccueilPage() {
               Bannières du haut de l'accueil. Pas de sous-sections ici.
             </p>
           </div>
-          <a
-            href="/boutique/bannieres"
-            className="text-sm font-medium text-yellow-700 hover:underline"
+          <button
+            onClick={() => {
+              setBanniereEnEdition(null);
+              setModaleBanniere(true);
+            }}
+            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600"
           >
-            Gérer en détail
-          </a>
+            <Icon name="plus" size={15} /> Bannière
+          </button>
         </div>
 
         {bannieres.isLoading ? (
@@ -126,8 +135,15 @@ export default function AccueilPage() {
               <Vignette
                 key={b.id}
                 image={b.image}
-                titre={b.titre}
+                titre={b.titre || 'Sans titre'}
+                sousTitre={
+                  b.produits?.length ? `${b.produits.length} produit(s) mis en avant` : undefined
+                }
                 actif={b.isActive}
+                onModifier={() => {
+                  setBanniereEnEdition(b);
+                  setModaleBanniere(true);
+                }}
                 onBasculer={() => bascBanniere.mutate(b.id)}
                 onSupprimer={() => supprBanniere.mutate(b.id)}
               />
@@ -180,6 +196,8 @@ export default function AccueilPage() {
                   titre={bloc.titre || 'Sans titre'}
                   sousTitre={bloc.sousTitre}
                   actif={bloc.isActive}
+                  // Ouvre la page de composition : produits, remises, durées, ordre.
+                  lien={`/boutique/accueil/sous-section/${bloc.id}`}
                   onModifier={() => {
                     setSectionCible(section.cle);
                     setBlocEnEdition(bloc);
@@ -259,6 +277,17 @@ export default function AccueilPage() {
           )}
         </section>
       ))}
+
+      {modaleBanniere && (
+        <BanniereModal
+          banniere={banniereEnEdition}
+          onFermer={() => {
+            setModaleBanniere(false);
+            setBanniereEnEdition(null);
+          }}
+          onEnregistre={() => rafraichir('bannieres')}
+        />
+      )}
 
       {sectionCible && (
         <SousSectionModal
@@ -343,6 +372,7 @@ function Vignette({
   titre,
   sousTitre,
   actif,
+  lien,
   onModifier,
   onBasculer,
   onSupprimer,
@@ -351,19 +381,38 @@ function Vignette({
   titre: string;
   sousTitre?: string | null;
   actif: boolean;
+  /** Si fourni, l'aperçu mène à la page de composition. */
+  lien?: string;
   onModifier?: () => void;
   onBasculer: () => void;
   onSupprimer: () => void;
 }) {
+  const apercu = (
+    <div className="aspect-[16/9] bg-gray-50 flex items-center justify-center">
+      {image ? (
+        <img src={image} alt={titre} className="w-full h-full object-cover" />
+      ) : (
+        <Icon name="image" size={22} className="text-gray-300" />
+      )}
+    </div>
+  );
+
   return (
-    <div className="border border-gray-100 rounded-lg overflow-hidden">
-      <div className="aspect-[16/9] bg-gray-50 flex items-center justify-center">
-        {image ? (
-          <img src={image} alt={titre} className="w-full h-full object-cover" />
-        ) : (
-          <Icon name="image" size={22} className="text-gray-300" />
-        )}
-      </div>
+    <div className="border border-gray-100 rounded-lg overflow-hidden hover:border-gray-200 transition-colors">
+      {lien ? (
+        <Link to={lien} title="Composer cette sous-section" className="block group">
+          <div className="relative">
+            {apercu}
+            <div className="absolute inset-0 bg-gray-900/0 group-hover:bg-gray-900/30 transition-colors flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-white bg-gray-900/80 px-2.5 py-1 rounded-full">
+                Composer
+              </span>
+            </div>
+          </div>
+        </Link>
+      ) : (
+        apercu
+      )}
       <div className="p-2.5">
         <div className="text-sm font-medium text-gray-900 truncate">{titre}</div>
         {sousTitre && <div className="text-xs text-gray-500 truncate">{sousTitre}</div>}

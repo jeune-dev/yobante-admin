@@ -75,7 +75,7 @@ function Informations({
       toast.success('Profil mis à jour');
       onEnregistre();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Mise à jour impossible'),
+    onError: (e: any) => toast.error(e?.message ?? 'Mise à jour impossible'),
   });
 
   return (
@@ -110,7 +110,7 @@ function MotDePasse() {
       setNouveau('');
       setConfirmation('');
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Modification impossible'),
+    onError: (e: any) => toast.error(e?.message ?? 'Modification impossible'),
   });
 
   const valider = () => {

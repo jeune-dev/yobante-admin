@@ -1,59 +1,72 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import shopClient from '@/infrastructure/http/shop.client';
-import { toast } from 'react-toastify';
+import Icon from '@/shared/components/dashboard/Icon';
+import DemandeDetailModal from './DemandeDetailModal';
+
+/** Les demandes en cours d'instruction restent visibles jusqu'à publication. */
+const STATUTS = [
+  { cle: 'en_attente', libelle: 'En attente' },
+  { cle: 'valide_step1', libelle: 'En cours de validation' },
+  { cle: 'rejete', libelle: 'Rejetées' },
+  { cle: 'valide', libelle: 'Publiées' },
+] as const;
 
 const api = {
-  getDemandes: (p: any) =>
-    shopClient
-      .get('/admin/produits', { params: { ...p, statutValidation: 'en_attente' } }),
-  valider: (id: string) => shopClient.patch(`/admin/produits/${id}/valider`),
-  rejeter: (id: string, motif: string) =>
-    shopClient.patch(`/admin/produits/${id}/rejeter`, { motif }),
+  getDemandes: (p: any) => shopClient.get('/admin/produits', { params: p }),
 };
+
+const formaterPrix = (v: any) => Number(v ?? 0).toLocaleString('fr-FR');
 
 export default function DemandesPage() {
   const qc = useQueryClient();
+  const [statut, setStatut] = useState<string>('en_attente');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [motifModal, setMotifModal] = useState<{ id: string; nom: string } | null>(null);
-  const [motif, setMotif] = useState('');
+  const [demandeOuverte, setDemandeOuverte] = useState<any>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['demandes', search, page],
-    queryFn: () => api.getDemandes({ search, page, limit: 20 }),
+    queryKey: ['demandes', statut, search, page],
+    queryFn: () => api.getDemandes({ statutValidation: statut, search, page, limit: 20 }),
   });
 
-  const validerMutation = useMutation({
-    mutationFn: (id: string) => api.valider(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['demandes'] });
-      toast.success('Produit validé');
-    },
-    onError: () => toast.error('Erreur'),
-  });
+  const produits: any[] = (data as any)?.produits ?? [];
+  const pagination = (data as any)?.pagination;
 
-  const rejeterMutation = useMutation({
-    mutationFn: ({ id, motif }: { id: string; motif: string }) => api.rejeter(id, motif),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['demandes'] });
-      setMotifModal(null);
-      setMotif('');
-      toast.success('Produit rejeté');
-    },
-    onError: () => toast.error('Erreur'),
-  });
+  const rafraichir = () => qc.invalidateQueries({ queryKey: ['demandes'] });
 
-  const produits = data?.produits || [];
-  const pagination = data?.pagination;
+  const nomVendeur = (p: any) =>
+    p.vendeur?.profilVendeur?.nomBoutique ||
+    [p.vendeur?.prenom, p.vendeur?.nom].filter(Boolean).join(' ') ||
+    '—';
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Demandes de publication</h1>
-          <p className="text-sm text-gray-500 mt-1">Produits en attente de validation</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Demandes de publication</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Produits soumis par les vendeurs depuis l'application.
+        </p>
+      </div>
+
+      {/* Filtre par statut */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {STATUTS.map((s) => (
+          <button
+            key={s.cle}
+            onClick={() => {
+              setStatut(s.cle);
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              statut === s.cle
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+            }`}
+          >
+            {s.libelle}
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -71,6 +84,10 @@ export default function DemandesPage() {
 
         {isLoading ? (
           <div className="p-8 text-center text-gray-400">Chargement…</div>
+        ) : produits.length === 0 ? (
+          <div className="p-10 text-center text-gray-400">
+            Aucune demande dans cette catégorie.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -79,63 +96,69 @@ export default function DemandesPage() {
                   <th className="p-4 font-medium text-gray-500">Produit</th>
                   <th className="p-4 font-medium text-gray-500">Vendeur</th>
                   <th className="p-4 font-medium text-gray-500">Prix</th>
-                  <th className="p-4 font-medium text-gray-500">Date soumission</th>
-                  <th className="p-4 font-medium text-gray-500 text-center">Actions</th>
+                  <th className="p-4 font-medium text-gray-500">Stock</th>
+                  <th className="p-4 font-medium text-gray-500">Soumise le</th>
+                  <th className="p-4 font-medium text-gray-500 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {produits.map((p: any) => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                {produits.map((p) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => setDemandeOuverte(p)}
+                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {p.images?.[0] ? (
-                          <img
-                            src={p.images[0]}
-                            className="w-10 h-10 rounded-lg object-cover"
-                            alt=""
-                          />
+                          <span className="relative shrink-0">
+                            <img
+                              src={p.images[0]}
+                              className="w-10 h-10 rounded-lg object-cover"
+                              alt=""
+                            />
+                            {p.images.length > 1 && (
+                              <span className="absolute -bottom-1 -right-1 text-[10px] font-semibold bg-gray-900 text-white rounded-full px-1.5">
+                                {p.images.length}
+                              </span>
+                            )}
+                          </span>
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-100" />
+                          <span className="w-10 h-10 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center">
+                            <Icon name="image" size={16} className="text-gray-300" />
+                          </span>
                         )}
-                        <span className="font-medium">{p.nom}</span>
+                        <span className="min-w-0">
+                          <span className="block font-medium text-gray-900 truncate">
+                            {p.nom}
+                          </span>
+                          {p.messageVendeur && (
+                            <span className="block text-xs text-blue-600 truncate">
+                              Message joint
+                            </span>
+                          )}
+                        </span>
                       </div>
                     </td>
-                    <td className="p-4 text-gray-600">
-                      {p.vendeur?.nomBoutique || p.vendeur?.nom || '—'}
-                    </td>
-                    <td className="p-4">{p.prix?.toLocaleString('fr-FR')} FCFA</td>
+                    <td className="p-4 text-gray-600">{nomVendeur(p)}</td>
+                    <td className="p-4">{formaterPrix(p.prix)} FCFA</td>
+                    <td className="p-4 text-gray-600">{p.stock ?? 0}</td>
                     <td className="p-4 text-gray-500">
                       {new Date(p.createdAt).toLocaleDateString('fr-FR')}
                     </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => validerMutation.mutate(p.id)}
-                          disabled={validerMutation.isPending}
-                          className="px-3 py-1 bg-green-500 text-white rounded-lg text-xs hover:bg-green-600 disabled:opacity-60"
-                        >
-                          Valider
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMotifModal({ id: p.id, nom: p.nom });
-                            setMotif('');
-                          }}
-                          className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs hover:bg-red-600"
-                        >
-                          Rejeter
-                        </button>
-                      </div>
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDemandeOuverte(p);
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                      >
+                        Consulter
+                      </button>
                     </td>
                   </tr>
                 ))}
-                {produits.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-400">
-                      Aucune demande en attente
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -143,60 +166,27 @@ export default function DemandesPage() {
 
         {pagination?.totalPages > 1 && (
           <div className="flex justify-center p-4 gap-2">
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((n) => (
               <button
-                key={p}
-                onClick={() => setPage(p)}
+                key={n}
+                onClick={() => setPage(n)}
                 className={`w-8 h-8 rounded text-sm ${
-                  page === p ? 'bg-yellow-500 text-white' : 'hover:bg-gray-100'
+                  page === n ? 'bg-yellow-500 text-white' : 'hover:bg-gray-100'
                 }`}
               >
-                {p}
+                {n}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Modal motif rejet */}
-      {motifModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setMotifModal(null)}
-        >
-          <div
-            className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg font-bold mb-1">Rejeter le produit</h2>
-            <p className="text-sm text-gray-500 mb-4">{motifModal.nom}</p>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Motif du rejet</label>
-              <textarea
-                value={motif}
-                onChange={(e) => setMotif(e.target.value)}
-                rows={3}
-                className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
-                placeholder="Expliquer la raison du rejet…"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                onClick={() => setMotifModal(null)}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => rejeterMutation.mutate({ id: motifModal.id, motif })}
-                disabled={rejeterMutation.isPending}
-                className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-60"
-              >
-                {rejeterMutation.isPending ? 'Rejet…' : 'Confirmer le rejet'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {demandeOuverte && (
+        <DemandeDetailModal
+          demande={demandeOuverte}
+          onFermer={() => setDemandeOuverte(null)}
+          onTraitee={rafraichir}
+        />
       )}
     </div>
   );

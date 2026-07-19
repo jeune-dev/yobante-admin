@@ -3,9 +3,13 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import shopClient from '@/infrastructure/http/shop.client';
 import { promotionsApi } from '@/domains/shop/api/promotions.api';
+import Icon from '@/shared/components/dashboard/Icon';
+import Modal, { BoutonPrincipal, BoutonSecondaire, Champ } from './Modal';
 
 interface Props {
   section: string;
+  /** Renseigné depuis la page d'une sous-section : le produit s'y rattache. */
+  blocPromoId?: string;
   /** Null en création. */
   promotion: any | null;
   onFermer: () => void;
@@ -15,40 +19,74 @@ interface Props {
 /** Découpe la date ISO renvoyée par l'API pour un `input[type=date]`. */
 const versInputDate = (iso?: string) => (iso ? iso.slice(0, 10) : '');
 
+const formaterPrix = (v: any) => Number(v ?? 0).toLocaleString('fr-FR');
+
 /**
- * Rattache un produit à une section promotionnelle, avec sa réduction et sa
- * période de validité.
+ * Rattache un produit à une section ou à une sous-section, avec sa remise et
+ * sa période de validité.
+ *
+ * L'ajout se fait en deux temps : on choisit d'abord un produit dans le
+ * catalogue, puis on règle les conditions de la promotion. En modification, le
+ * produit est figé et seule la seconde étape s'affiche.
  */
-export default function PromotionModal({ section, promotion, onFermer, onEnregistre }: Props) {
+export default function PromotionModal({
+  section,
+  blocPromoId,
+  promotion,
+  onFermer,
+  onEnregistre,
+}: Props) {
   const edition = Boolean(promotion);
+
+  // En modification le produit est déjà connu : on ouvre directement le réglage.
+  const [etape, setEtape] = useState<'choix' | 'details'>(edition ? 'details' : 'choix');
+  const [produit, setProduit] = useState<any>(promotion?.produit ?? null);
 
   const [recherche, setRecherche] = useState('');
   const [resultats, setResultats] = useState<any[]>([]);
-  const [produit, setProduit] = useState<any>(promotion?.produit ?? null);
+  const [chargement, setChargement] = useState(false);
+
   const [prixPromo, setPrixPromo] = useState(promotion?.prixPromo?.toString() ?? '');
-  const [reduction, setReduction] = useState(promotion?.pourcentageReduction?.toString() ?? '');
+  const [reduction, setReduction] = useState(
+    promotion?.pourcentageReduction ? String(Math.round(Number(promotion.pourcentageReduction))) : ''
+  );
   const [dateDebut, setDateDebut] = useState(versInputDate(promotion?.dateDebut));
   const [dateFin, setDateFin] = useState(versInputDate(promotion?.dateFin));
 
-  // Recherche différée : évite une requête à chaque frappe.
+  /**
+   * Charge le catalogue à l'ouverture, puis à chaque recherche.
+   *
+   * La liste s'affiche d'emblée : l'admin doit pouvoir parcourir les produits
+   * disponibles sans deviner un nom à taper.
+   */
   useEffect(() => {
-    if (edition || recherche.trim().length < 2) {
-      setResultats([]);
-      return;
-    }
-    const t = setTimeout(async () => {
-      try {
-        const r: any = await shopClient.get('/admin/produits', {
-          params: { search: recherche, limit: 8 },
-        });
-        // Le client déballe l'enveloppe : `r` est déjà la charge utile.
-        setResultats(r.produits ?? []);
-      } catch {
-        setResultats([]);
-      }
-    }, 350);
+    if (etape !== 'choix') return;
+
+    setChargement(true);
+    const t = setTimeout(
+      async () => {
+        try {
+          const r: any = await shopClient.get('/admin/produits', {
+            params: {
+              limit: 30,
+              isActive: true,
+              ...(recherche.trim().length >= 2 ? { search: recherche.trim() } : {}),
+            },
+          });
+          setResultats(r.produits ?? []);
+        } catch {
+          setResultats([]);
+        } finally {
+          setChargement(false);
+        }
+      },
+      // Pas d'attente au premier affichage, anti-rebond ensuite.
+      recherche ? 350 : 0
+    );
     return () => clearTimeout(t);
-  }, [recherche, edition]);
+  }, [recherche, etape]);
+
+  const prixBase = Number(produit?.prix ?? 0);
 
   /**
    * Le prix promotionnel et le pourcentage décrivent la même remise : saisir
@@ -56,19 +94,17 @@ export default function PromotionModal({ section, promotion, onFermer, onEnregis
    */
   const surPrix = (valeur: string) => {
     setPrixPromo(valeur);
-    const base = Number(produit?.prix);
     const promo = Number(valeur);
-    if (base > 0 && promo > 0 && promo < base) {
-      setReduction(Math.round((1 - promo / base) * 100).toString());
+    if (prixBase > 0 && promo > 0 && promo < prixBase) {
+      setReduction(Math.round((1 - promo / prixBase) * 100).toString());
     }
   };
 
   const surReduction = (valeur: string) => {
     setReduction(valeur);
-    const base = Number(produit?.prix);
     const pct = Number(valeur);
-    if (base > 0 && pct > 0 && pct < 100) {
-      setPrixPromo(Math.round(base * (1 - pct / 100)).toString());
+    if (prixBase > 0 && pct > 0 && pct < 100) {
+      setPrixPromo(Math.round(prixBase * (1 - pct / 100)).toString());
     }
   };
 
@@ -76,25 +112,31 @@ export default function PromotionModal({ section, promotion, onFermer, onEnregis
     mutationFn: () => {
       const corps: any = {
         section,
+        ...(blocPromoId ? { blocPromoId } : {}),
         ...(prixPromo ? { prixPromo: Number(prixPromo) } : {}),
         ...(reduction ? { pourcentageReduction: Number(reduction) } : {}),
         ...(dateDebut ? { dateDebut: new Date(dateDebut).toISOString() } : {}),
-        ...(dateFin ? { dateFin: new Date(dateFin).toISOString() } : {}),
+        // Fin de journée : une promotion « jusqu'au 15 » doit couvrir le 15.
+        ...(dateFin ? { dateFin: new Date(`${dateFin}T23:59:59`).toISOString() } : {}),
       };
       if (edition) return promotionsApi.update(promotion.id, corps);
       return promotionsApi.create({ ...corps, produitId: produit.id });
     },
     onSuccess: () => {
-      toast.success(edition ? 'Promotion modifiée' : 'Produit ajouté à la section');
+      toast.success(edition ? 'Promotion modifiée' : 'Produit ajouté à la promotion');
       onEnregistre();
       onFermer();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message ?? 'Enregistrement impossible'),
+    onError: (e: any) => toast.error(e?.message ?? 'Enregistrement impossible'),
   });
 
   const valider = () => {
     if (!edition && !produit) {
       toast.error('Choisissez un produit');
+      return;
+    }
+    if (prixBase > 0 && Number(prixPromo) >= prixBase) {
+      toast.error('Le prix promotionnel doit être inférieur au prix du produit');
       return;
     }
     if (dateDebut && dateFin && new Date(dateFin) < new Date(dateDebut)) {
@@ -104,112 +146,158 @@ export default function PromotionModal({ section, promotion, onFermer, onEnregis
     enregistrer.mutate();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-md p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">
-          {edition ? 'Modifier la promotion' : 'Ajouter un produit en promotion'}
-        </h3>
+  const choisir = (p: any) => {
+    setProduit(p);
+    setEtape('details');
+    // Pré-remplit avec le prix promo déjà porté par la fiche produit, s'il existe.
+    if (p.prixPromo && Number(p.prixPromo) > 0 && !prixPromo) {
+      surPrix(String(Math.round(Number(p.prixPromo))));
+    }
+  };
 
-        {edition ? (
-          <div className="mb-4 px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700">
-            {promotion.produit?.nom ?? 'Produit'}
-          </div>
+  return (
+    <Modal
+      titre={edition ? 'Modifier la promotion' : 'Ajouter un produit en promotion'}
+      sousTitre={
+        edition
+          ? undefined
+          : etape === 'choix'
+            ? 'Étape 1 sur 2 — choisir le produit'
+            : 'Étape 2 sur 2 — définir la remise et la durée'
+      }
+      onFermer={onFermer}
+      actions={
+        etape === 'choix' ? (
+          <BoutonSecondaire onClick={onFermer}>Annuler</BoutonSecondaire>
         ) : (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Produit</label>
-            {produit ? (
-              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-800">
-                  {produit.nom} — {produit.prix} FCFA
-                </span>
-                <button
-                  onClick={() => setProduit(null)}
-                  className="text-xs text-gray-500 hover:text-gray-800"
-                >
-                  Changer
-                </button>
-              </div>
-            ) : (
-              <>
-                <input
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  placeholder="Rechercher un produit…"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                />
-                {resultats.length > 0 && (
-                  <ul className="mt-1 border border-gray-100 rounded-lg max-h-44 overflow-auto">
-                    {resultats.map((p) => (
-                      <li key={p.id}>
-                        <button
-                          onClick={() => {
-                            setProduit(p);
-                            setRecherche('');
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                        >
-                          {p.nom} — {p.prix} FCFA
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
+          <>
+            {!edition && (
+              <BoutonSecondaire onClick={() => setEtape('choix')}>Retour</BoutonSecondaire>
+            )}
+            <BoutonSecondaire onClick={onFermer}>Annuler</BoutonSecondaire>
+            <BoutonPrincipal onClick={valider} disabled={enregistrer.isPending} ton="or">
+              {enregistrer.isPending
+                ? 'Enregistrement…'
+                : edition
+                  ? 'Enregistrer'
+                  : 'Ajouter à la promotion'}
+            </BoutonPrincipal>
+          </>
+        )
+      }
+    >
+      {/* ── Étape 1 : choisir dans le catalogue ────────────────────────── */}
+      {etape === 'choix' && (
+        <div className="space-y-3">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <Icon name="search" size={15} />
+            </span>
+            <input
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="Rechercher dans le catalogue…"
+              autoFocus
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+            />
+          </div>
+
+          {chargement && <p className="text-xs text-gray-400">Chargement du catalogue…</p>}
+
+          {!chargement && resultats.length === 0 && (
+            <p className="text-sm text-gray-400 py-8 text-center">
+              {recherche ? 'Aucun produit ne correspond.' : 'Aucun produit dans le catalogue.'}
+            </p>
+          )}
+
+          {resultats.length > 0 && (
+            <ul className="border border-gray-100 rounded-lg max-h-80 overflow-auto divide-y divide-gray-50">
+              {resultats.map((p) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => choisir(p)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-yellow-50/60 transition-colors"
+                  >
+                    {p.images?.[0] ? (
+                      <img
+                        src={p.images[0]}
+                        alt=""
+                        className="w-10 h-10 rounded-md object-cover shrink-0"
+                      />
+                    ) : (
+                      <span className="w-10 h-10 rounded-md bg-gray-100 shrink-0" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-gray-900 truncate">
+                        {p.nom}
+                      </span>
+                      <span className="block text-xs text-gray-400">Stock : {p.stock ?? 0}</span>
+                    </span>
+                    <span className="text-sm text-gray-600 shrink-0">
+                      {formaterPrix(p.prix)} FCFA
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ── Étape 2 : conditions de la promotion ───────────────────────── */}
+      {etape === 'details' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-lg">
+            {produit?.images?.[0] && (
+              <img
+                src={produit.images[0]}
+                alt=""
+                className="w-10 h-10 rounded-md object-cover shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {produit?.nom ?? 'Produit'}
+              </p>
+              {prixBase > 0 && (
+                <p className="text-xs text-gray-500">
+                  Prix habituel : {formaterPrix(prixBase)} FCFA
+                </p>
+              )}
+            </div>
+            {!edition && (
+              <button
+                onClick={() => setEtape('choix')}
+                className="text-xs font-medium text-gray-500 hover:text-gray-900 shrink-0"
+              >
+                Changer
+              </button>
             )}
           </div>
-        )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Champ label="Prix promo (FCFA)" valeur={prixPromo} onChange={surPrix} type="number" />
-          <Champ label="Réduction (%)" valeur={reduction} onChange={surReduction} type="number" />
-          <Champ label="Début" valeur={dateDebut} onChange={setDateDebut} type="date" />
-          <Champ label="Fin" valeur={dateFin} onChange={setDateFin} type="date" />
+          {/* ── Remise ─────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-3">
+            <Champ label="Prix promo (FCFA)" valeur={prixPromo} onChange={surPrix} type="number" />
+            <Champ label="Remise (%)" valeur={reduction} onChange={surReduction} type="number" />
+          </div>
+          <p className="text-xs text-gray-400 -mt-2">
+            Saisir l'un calcule l'autre automatiquement.
+          </p>
+
+          {/* ── Durée ──────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-3">
+            <Champ label="Début" valeur={dateDebut} onChange={setDateDebut} type="date" />
+            <Champ label="Fin" valeur={dateFin} onChange={setDateFin} type="date" />
+          </div>
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50/60 rounded-lg">
+            <Icon name="clock" size={15} className="text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-blue-800">
+              Passé la date de fin, le produit disparaît automatiquement de l'application.
+              Sans dates, la promotion reste affichée en permanence.
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-gray-400 mt-1">
-          Sans dates, la promotion reste affichée en permanence.
-        </p>
-
-        <div className="flex justify-end gap-2 mt-5">
-          <button
-            onClick={onFermer}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={valider}
-            disabled={enregistrer.isPending}
-            className="px-4 py-2 text-sm font-semibold rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 disabled:opacity-50"
-          >
-            {enregistrer.isPending ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Champ({
-  label,
-  valeur,
-  onChange,
-  type = 'text',
-}: {
-  label: string;
-  valeur: string;
-  onChange: (v: string) => void;
-  type?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={valeur}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-      />
-    </div>
+      )}
+    </Modal>
   );
 }

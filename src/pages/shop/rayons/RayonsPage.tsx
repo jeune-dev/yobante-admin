@@ -294,8 +294,18 @@ export default function RayonsPage() {
               </thead>
               <tbody>
                 {sousRayons.map((sr: any) => (
-                  <tr key={sr.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="p-4 font-medium">{sr.nom}</td>
+                  <tr
+                    key={sr.id}
+                    // La ligne entière mène aux produits rangés dans ce sous-rayon.
+                    onClick={() => navigate(`/boutique/rayons/sous-rayon/${sr.id}`)}
+                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="p-4">
+                      <span className="font-medium">{sr.nom}</span>
+                      <span className="block text-xs text-gray-400 mt-0.5">
+                        Voir et gérer ses produits
+                      </span>
+                    </td>
                     <td className="p-4 text-center">
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
@@ -308,7 +318,8 @@ export default function RayonsPage() {
                     <td className="p-4 text-center">
                       <div className="flex justify-center gap-2">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditSr(sr);
                             setSrForm({ nom: sr.nom, description: sr.description || '' });
                             setShowSrModal(true);
@@ -321,7 +332,10 @@ export default function RayonsPage() {
                           </svg>
                         </button>
                         <button
-                          onClick={() => archiverSrMutation.mutate(sr.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            archiverSrMutation.mutate(sr.id);
+                          }}
                           title="Archiver"
                           className="p-1.5 hover:bg-gray-100 rounded text-gray-500"
                         >

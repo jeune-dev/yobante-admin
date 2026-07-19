@@ -12,7 +12,6 @@ const TITRES: Record<string, string> = {
   clients: 'Clients',
   vendeurs: 'Vendeurs',
   demandes: 'Demandes de publication',
-  bannieres: 'Bannières',
   avis: 'Avis',
   paiements: 'Paiements',
   profil: 'Mon profil',

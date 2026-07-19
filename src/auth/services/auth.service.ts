@@ -21,9 +21,14 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
-// Forme de réponse du backend boutique (Render) :
-// { success, message, data: { token, refreshToken, user } }
+// Le backend boutique répond { success, message, data: { token, refreshToken,
+// user } }, mais shopClient déballe déjà l'enveloppe : on reçoit donc
+// directement { token, refreshToken, user }. Le repli sur `data` couvre le cas
+// où la réponse arriverait encore enveloppée.
 interface ShopLoginBody {
+  token?: string;
+  refreshToken?: string;
+  user?: AuthUser;
   data?: {
     token?: string;
     refreshToken?: string;
@@ -32,11 +37,14 @@ interface ShopLoginBody {
 }
 
 // Normalise la réponse boutique vers { accessToken, user }
-const normalizeShopAuth = (body: ShopLoginBody): AuthResponse => ({
-  accessToken: body?.data?.token ?? '',
-  refreshToken: body?.data?.refreshToken,
-  user: body?.data?.user as AuthUser,
-});
+const normalizeShopAuth = (body: ShopLoginBody): AuthResponse => {
+  const contenu = body?.token || body?.user ? body : (body?.data ?? {});
+  return {
+    accessToken: contenu.token ?? '',
+    refreshToken: contenu.refreshToken,
+    user: contenu.user as AuthUser,
+  };
+};
 
 export interface LoginResult {
   shop: { success: boolean; data?: AuthResponse; error?: any };

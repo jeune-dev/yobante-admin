@@ -5,8 +5,10 @@ import ShipmentLayout from '@/layouts/ShipmentLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import ShopDashboard from '@/pages/shop/dashboard/DashboardPage';
 import AccueilPage from '@/pages/shop/accueil/AccueilPage';
+import SousSectionPage from '@/pages/shop/accueil/SousSectionPage';
 import ProfilPage from '@/pages/shop/profil/ProfilPage';
 import RayonsPage from '@/pages/shop/rayons/RayonsPage';
+import SousRayonProduitsPage from '@/pages/shop/rayons/SousRayonProduitsPage';
 import ProductsPage from '@/pages/shop/products/ProductsPage';
 import ProductCreatePage from '@/pages/shop/products/ProductCreatePage';
 import ProductEditPage from '@/pages/shop/products/ProductEditPage';
@@ -16,7 +18,6 @@ import UsersPage from '@/pages/shop/users/UsersPage';
 import UserDetailPage from '@/pages/shop/users/UserDetailPage';
 import VendeursPage from '@/pages/shop/vendeurs/VendeursPage';
 import DemandesPage from '@/pages/shop/demandes/DemandesPage';
-import BannieresPage from '@/pages/shop/bannieres/BannieresPage';
 import ReviewsPage from '@/pages/shop/reviews/ReviewsPage';
 import PaymentsPage from '@/pages/shop/payments/PaymentsPage';
 import SettingsPage from '@/pages/shop/settings/SettingsPage';
@@ -52,8 +53,10 @@ export const router = createBrowserRouter(
                 { index: true, element: <Navigate to="dashboard" replace /> },
                 { path: 'dashboard', element: <ShopDashboard /> },
               { path: 'accueil', element: <AccueilPage /> },
+              { path: 'accueil/sous-section/:id', element: <SousSectionPage /> },
               { path: 'profil', element: <ProfilPage /> },
                 { path: 'rayons', element: <RayonsPage /> },
+                { path: 'rayons/sous-rayon/:id', element: <SousRayonProduitsPage /> },
                 { path: 'produits', element: <ProductsPage /> },
                 { path: 'produits/nouveau', element: <ProductCreatePage /> },
                 { path: 'produits/:id/modifier', element: <ProductEditPage /> },
@@ -63,7 +66,6 @@ export const router = createBrowserRouter(
                 { path: 'clients/:id', element: <UserDetailPage /> },
                 { path: 'vendeurs', element: <VendeursPage /> },
                 { path: 'demandes', element: <DemandesPage /> },
-                { path: 'bannieres', element: <BannieresPage /> },
                 { path: 'avis', element: <ReviewsPage /> },
                 { path: 'paiements', element: <PaymentsPage /> },
                 { path: 'parametres', element: <SettingsPage /> },

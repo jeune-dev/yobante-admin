@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { blocsPromoApi } from '@/domains/shop/api/blocs-promo.api';
+import Icon from '@/shared/components/dashboard/Icon';
+import Modal, { BoutonPrincipal, BoutonSecondaire, Champ } from './Modal';
 
 interface Props {
   section: string;
@@ -10,6 +12,12 @@ interface Props {
   onFermer: () => void;
   onEnregistre: () => void;
 }
+
+const LIBELLES: Record<string, string> = {
+  nos_promos_du_moment: 'Nos promos du moment',
+  a_ne_pas_rater: 'À ne pas rater',
+  nos_promos_a_venir: 'Nos promos à venir',
+};
 
 /** Création ou modification d'une sous-section : image, titre, sous-titre, ordre. */
 export default function SousSectionModal({ section, bloc, onFermer, onEnregistre }: Props) {
@@ -35,41 +43,72 @@ export default function SousSectionModal({ section, bloc, onFermer, onEnregistre
       onEnregistre();
       onFermer();
     },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.message ?? 'Enregistrement impossible'),
+    onError: (e: any) => toast.error(e?.message ?? 'Enregistrement impossible'),
   });
 
   const choisirImage = (f: File | null) => {
     setFichier(f);
     // Aperçu local : l'image n'est envoyée qu'à l'enregistrement.
-    setApercu(f ? URL.createObjectURL(f) : bloc?.image ?? null);
+    setApercu(f ? URL.createObjectURL(f) : (bloc?.image ?? null));
+  };
+
+  const valider = () => {
+    if (!titre.trim()) {
+      toast.error('Donnez un titre à la sous-section');
+      return;
+    }
+    enregistrer.mutate();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-md p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">
-          {edition ? 'Modifier la sous-section' : 'Nouvelle sous-section'}
-        </h3>
-
-        <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
-        <div className="mb-4">
-          <div className="aspect-[16/9] bg-gray-50 rounded-lg overflow-hidden mb-2 flex items-center justify-center">
-            {apercu ? (
-              <img src={apercu} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xs text-gray-400">Aucune image</span>
-            )}
-          </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => choisirImage(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-gray-600"
-          />
+    <Modal
+      titre={edition ? 'Modifier la sous-section' : 'Nouvelle sous-section'}
+      sousTitre={LIBELLES[section] ?? section}
+      onFermer={onFermer}
+      actions={
+        <>
+          <BoutonSecondaire onClick={onFermer}>Annuler</BoutonSecondaire>
+          <BoutonPrincipal onClick={valider} disabled={enregistrer.isPending}>
+            {enregistrer.isPending ? 'Enregistrement…' : 'Enregistrer'}
+          </BoutonPrincipal>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Image</label>
+          {/* La zone entière est cliquable : plus confortable qu'un input nu. */}
+          <label className="block cursor-pointer group">
+            <div className="aspect-[16/9] rounded-xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-200 group-hover:border-yellow-400 transition-colors flex items-center justify-center">
+              {apercu ? (
+                <img src={apercu} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center">
+                  <Icon name="image" size={24} className="text-gray-300 mx-auto" />
+                  <p className="text-xs text-gray-400 mt-1.5">Cliquez pour choisir une image</p>
+                </div>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => choisirImage(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          {apercu && (
+            <p className="text-xs text-gray-400 mt-1.5">
+              Cliquez sur l'image pour la remplacer.
+            </p>
+          )}
         </div>
 
-        <Champ label="Titre" valeur={titre} onChange={setTitre} placeholder="Ex. Électroménager" />
+        <Champ
+          label="Titre"
+          valeur={titre}
+          onChange={setTitre}
+          placeholder="Ex. Électroménager"
+        />
         <Champ
           label="Sous-titre"
           valeur={sousTitre}
@@ -81,52 +120,9 @@ export default function SousSectionModal({ section, bloc, onFermer, onEnregistre
           valeur={ordre}
           onChange={setOrdre}
           type="number"
-          placeholder="Laisser vide pour placer à la fin"
+          aide="Laisser vide pour placer la sous-section en fin de section."
         />
-
-        <div className="flex justify-end gap-2 mt-5">
-          <button
-            onClick={onFermer}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={() => enregistrer.mutate()}
-            disabled={enregistrer.isPending}
-            className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
-          >
-            {enregistrer.isPending ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
       </div>
-    </div>
-  );
-}
-
-function Champ({
-  label,
-  valeur,
-  onChange,
-  placeholder,
-  type = 'text',
-}: {
-  label: string;
-  valeur: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-}) {
-  return (
-    <div className="mb-3">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={valeur}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-      />
-    </div>
+    </Modal>
   );
 }
